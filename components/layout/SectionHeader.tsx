@@ -1,11 +1,13 @@
 import { cva, VariantProps } from 'class-variance-authority';
 import { ArrowLeftIcon } from 'lucide-react';
+import Link from 'next/link';
 
 interface SectionHeaderProps {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   titleIcon?: React.ReactNode;
   onBack?: () => void;
+  backHref?: string;
   actions?: React.ReactNode;
   size?: VariantProps<typeof titleVariant>['size'];
 }
@@ -38,11 +40,19 @@ const subtitleVariant = cva(' text-muted-foreground', {
   },
 });
 
-export default function SectionHeader({ title, subtitle, titleIcon, onBack, actions, size }: SectionHeaderProps) {
+export default function SectionHeader({
+  title,
+  subtitle,
+  titleIcon,
+  onBack,
+  backHref,
+  actions,
+  size,
+}: SectionHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3">
-        {onBack && (
+        {onBack ? (
           <button
             type="button"
             onClick={onBack}
@@ -50,7 +60,14 @@ export default function SectionHeader({ title, subtitle, titleIcon, onBack, acti
           >
             <ArrowLeftIcon className="h-3.5 w-3.5" />
           </button>
-        )}
+        ) : backHref ? (
+          <Link
+            href={backHref}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+          >
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
         {titleIcon}
         <div>
           <p className={titleVariant({ size })}>{title}</p>

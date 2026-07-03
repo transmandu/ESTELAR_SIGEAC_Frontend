@@ -21,6 +21,7 @@ import { useCompanyStore } from '@/stores/CompanyStore';
 import { PlanificationAlertResource } from '@api/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { LucideIcon } from 'lucide-react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -39,13 +40,14 @@ import {
 import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { AlertBadge } from '../control_mantenimiento/_components/control-grid-shared';
+import SectionHeader from '@/components/layout/SectionHeader';
 
 const LEVEL_CONFIG: Record<
   PlanificationAlertStatus,
   {
-    icon: typeof TriangleAlert;
-    cardBorder: string;
+    icon: LucideIcon;
     cardBg: string;
+    iconBg: string;
     iconText: string;
     label: string;
     helpText: string;
@@ -53,25 +55,25 @@ const LEVEL_CONFIG: Record<
 > = {
   OVERDUE: {
     icon: TriangleAlert,
-    cardBorder: 'border-red-500/20',
-    cardBg: 'bg-red-500/5 dark:bg-red-950/20',
-    iconText: 'text-red-600 dark:text-red-400',
+    cardBg: 'bg-red-600 text-white hover:bg-red-700',
+    iconBg: 'bg-white/15',
+    iconText: 'text-white',
     label: 'Vencidos',
     helpText: 'Requieren atención inmediata',
   },
   WARNING: {
     icon: AlertTriangle,
-    cardBorder: 'border-amber-500/20',
-    cardBg: 'bg-amber-500/5 dark:bg-amber-950/20',
-    iconText: 'text-amber-600 dark:text-amber-400',
+    cardBg: 'bg-amber-600 text-white hover:bg-amber-700',
+    iconBg: 'bg-white/15',
+    iconText: 'text-white',
     label: 'Próximos',
     helpText: 'Entraron en ventana de atención',
   },
   OK: {
     icon: ShieldCheck,
-    cardBorder: 'border-emerald-500/20',
-    cardBg: 'bg-emerald-500/5 dark:bg-emerald-950/20',
-    iconText: 'text-emerald-600 dark:text-emerald-400',
+    cardBg: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    iconBg: 'bg-white/15',
+    iconText: 'text-white',
     label: 'En tiempo',
     helpText: 'Sin riesgo inmediato',
   },
@@ -141,60 +143,80 @@ function formatRemainingValue(alert: PlanificationAlertResource) {
   return `${metric.remaining.toFixed(2)} ${suffix}`;
 }
 
+const TOTAL_SUMMARY_CONFIG = {
+  icon: Siren,
+  cardBg: 'bg-primary hover:bg-primary/90',
+  iconBg: 'bg-white/15',
+  iconText: 'text-white',
+  label: 'Total',
+};
+
 function SummaryTile({
-  status,
+  label,
   value,
   active,
   onClick,
+  icon: Icon,
+  cardBg,
+  iconBg,
+  iconText,
+  code,
 }: {
-  status: PlanificationAlertStatus;
+  code: string;
+  label: string;
   value: number;
   active: boolean;
   onClick: () => void;
+  icon: LucideIcon;
+  cardBg: string;
+  iconBg: string;
+  iconText: string;
 }) {
-  const config = LEVEL_CONFIG[status];
-  const Icon = config.icon;
-
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'group flex items-center gap-3 rounded-lg border bg-background p-4 text-left',
-        'transition-[background-color,border-color,transform] duration-150 ease-out active:scale-[0.99]',
+        'group inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold text-white',
+        'transition-transform duration-150 ease-out active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-        active ? cn(config.cardBorder, config.cardBg) : 'border-border/60 hover:bg-muted/40',
+        cardBg,
+        active
+          ? [
+              'ring-2 ring-offset-2',
+              {
+                'ring-primary': code === 'all',
+                'ring-emerald-600': code === 'OK',
+                'ring-amber-600': code === 'WARNING',
+                'ring-red-600': code === 'OVERDUE',
+              },
+            ]
+          : null,
       )}
     >
-      <span
-        className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-muted/30',
-          config.iconText,
-        )}
-      >
+      <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full', iconBg, iconText)}>
         <Icon className="h-4 w-4" />
       </span>
-      <span className="min-w-0">
-        <span className="block text-2xl font-bold leading-none tabular-nums">{value}</span>
-        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {config.label}
-        </span>
+      <span className="inline-flex items-center justify-center rounded-full bg-white/20 px-2 text-sm font-semibold tabular-nums text-white">
+        {value}
       </span>
+      <span className="whitespace-nowrap text-[10px] uppercase tracking-[0.2em] text-white/80">{label}</span>
     </button>
   );
 }
 
 function SummarySkeleton() {
   return (
-    <div className="grid gap-3 md:grid-cols-4">
+    <div className="flex flex-wrap gap-2">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="flex items-center gap-3 rounded-lg border border-border/60 p-4">
-          <Skeleton className="h-10 w-10 rounded-md" />
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-12" />
-            <Skeleton className="h-3 w-20" />
-          </div>
+        <div
+          key={index}
+          className="inline-flex items-center gap-2 rounded-full bg-slate-200/80 px-3 py-1.5 text-sm font-semibold text-transparent shadow-sm dark:bg-slate-800/80"
+        >
+          <Skeleton className="h-6 w-6 rounded-full" />
+          <Skeleton className="h-5 w-10 rounded-full" />
+          <Skeleton className="h-4 w-16 rounded-full" />
         </div>
       ))}
     </div>
@@ -373,73 +395,73 @@ export default function PlanificationAlertsDashboardPage() {
   if (isAircraftLoading) return <LoadingPage />;
 
   return (
-    <ContentLayout title="Alertas de Vencimiento">
+    <ContentLayout>
       <main className="max-w-[2080px] space-y-5 p-4 lg:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border/60 bg-background p-5">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
+        <SectionHeader
+          size="md"
+          title="Alertas de Planificación"
+          subtitle="Controles, hard time y directivas en orden de prioridad."
+          backHref={`/${selectedCompany?.slug}/planificacion`}
+          titleIcon={
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive/20">
               <Siren className="h-5 w-5 text-destructive" />
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">Cola unificada de vencimientos</h2>
             </div>
-            <p className="text-sm text-muted-foreground">Controles, hard time y directivas en orden de prioridad.</p>
-          </div>
-
-          <div className="flex items-center gap-3">
+          }
+          actions={
             <Badge variant="outline" className="border-primary/30 font-medium text-primary">
               {selectedAircraftLabel}
             </Badge>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/${selectedCompany?.slug}/planificacion`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Volver
-              </Link>
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         {isAlertsLoading ? (
           <SummarySkeleton />
         ) : (
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="flex flex-wrap gap-2">
             <SummaryTile
-              status="OVERDUE"
+              label={LEVEL_CONFIG.OVERDUE.label}
               value={summary?.overdue ?? 0}
+              code={statusFilter}
               active={statusFilter === 'OVERDUE'}
               onClick={() => setStatusFilter((prev) => (prev === 'OVERDUE' ? 'all' : 'OVERDUE'))}
+              icon={LEVEL_CONFIG.OVERDUE.icon}
+              cardBg={LEVEL_CONFIG.OVERDUE.cardBg}
+              iconBg={LEVEL_CONFIG.OVERDUE.iconBg}
+              iconText={LEVEL_CONFIG.OVERDUE.iconText}
             />
             <SummaryTile
-              status="WARNING"
+              label={LEVEL_CONFIG.WARNING.label}
               value={summary?.warning ?? 0}
+              code={statusFilter}
               active={statusFilter === 'WARNING'}
               onClick={() => setStatusFilter((prev) => (prev === 'WARNING' ? 'all' : 'WARNING'))}
+              icon={LEVEL_CONFIG.WARNING.icon}
+              cardBg={LEVEL_CONFIG.WARNING.cardBg}
+              iconBg={LEVEL_CONFIG.WARNING.iconBg}
+              iconText={LEVEL_CONFIG.WARNING.iconText}
             />
             <SummaryTile
-              status="OK"
+              label={LEVEL_CONFIG.OK.label}
               value={summary?.ok ?? 0}
+              code={statusFilter}
               active={statusFilter === 'OK'}
               onClick={() => setStatusFilter((prev) => (prev === 'OK' ? 'all' : 'OK'))}
+              icon={LEVEL_CONFIG.OK.icon}
+              cardBg={LEVEL_CONFIG.OK.cardBg}
+              iconBg={LEVEL_CONFIG.OK.iconBg}
+              iconText={LEVEL_CONFIG.OK.iconText}
             />
-            <button
-              type="button"
+            <SummaryTile
+              label={TOTAL_SUMMARY_CONFIG.label}
+              value={summary?.total ?? 0}
+              code={statusFilter}
+              active={statusFilter === 'all'}
               onClick={() => setStatusFilter('all')}
-              aria-pressed={statusFilter === 'all'}
-              className={cn(
-                'group flex items-center gap-3 rounded-lg border bg-background p-4 text-left',
-                'transition-[background-color,border-color,transform] duration-150 ease-out active:scale-[0.99]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                statusFilter === 'all' ? 'border-primary/30 bg-primary/5' : 'border-border/60 hover:bg-muted/40',
-              )}
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-muted/30 text-muted-foreground">
-                <Siren className="h-4 w-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-2xl font-bold leading-none tabular-nums">{summary?.total ?? 0}</span>
-                <span className="mt-1 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Total
-                </span>
-              </span>
-            </button>
+              icon={TOTAL_SUMMARY_CONFIG.icon}
+              cardBg={TOTAL_SUMMARY_CONFIG.cardBg}
+              iconBg={TOTAL_SUMMARY_CONFIG.iconBg}
+              iconText={TOTAL_SUMMARY_CONFIG.iconText}
+            />
           </div>
         )}
 
