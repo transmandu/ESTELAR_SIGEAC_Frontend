@@ -1,12 +1,12 @@
 'use client';
 
-import { useDeferredValue, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, PackageSearch, PackageX, Search, Wrench } from 'lucide-react';
+import { use, useDeferredValue, useEffect, useState } from 'react';
 
 import { ContentLayout } from '@/components/layout/ContentLayout';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { articleListOptions } from '@api/queries';
 
 import { columns } from './columns';
@@ -24,7 +24,10 @@ function StatsBar({ total }: { total: number }) {
   );
 }
 
-const DismountedPage = () => {
+const DismountedPage = (props: PageProps<'/[company]/almacen/componentes/desmontados'>) => {
+  const searchParams = use(props.searchParams);
+  const highlightArticleId = String(searchParams.article_id ?? '') || null;
+
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
@@ -51,7 +54,7 @@ const DismountedPage = () => {
   const total = meta?.total ?? 0;
 
   return (
-    <ContentLayout title="Componentes Desmontados">
+    <ContentLayout>
       <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5">
         {/* Header */}
         <div className="flex flex-col gap-4 rounded-lg border bg-background p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -60,9 +63,7 @@ const DismountedPage = () => {
               <Wrench className="size-5 text-muted-foreground" />
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-foreground">
-                Inventario de componentes removidos de aeronaves
-              </p>
+              <p className="text-sm font-medium text-foreground">Inventario de componentes removidos de aeronaves</p>
               <p className="text-xs text-muted-foreground">
                 Busca por serial, part number o descripción para localizar componentes.
               </p>
@@ -135,9 +136,7 @@ const DismountedPage = () => {
             </div>
             <div className="space-y-1">
               <p className="text-sm font-semibold text-foreground">Sin componentes desmontados</p>
-              <p className="text-xs text-muted-foreground">
-                No hay componentes en estado desmontado en este momento.
-              </p>
+              <p className="text-xs text-muted-foreground">No hay componentes en estado desmontado en este momento.</p>
             </div>
           </div>
         ) : (
@@ -152,6 +151,7 @@ const DismountedPage = () => {
               total={total}
               onPageChange={setPage}
               onPerPageChange={setPerPage}
+              highlightId={highlightArticleId ? Number(highlightArticleId) : null}
             />
           </div>
         )}
