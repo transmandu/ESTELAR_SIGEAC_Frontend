@@ -72,6 +72,11 @@ export default function CreateAirworthinessDirectiveComplianceExecutionForm({
     });
   }, [control.id, form]);
 
+  const selectedApplicabilityId = form.watch('applicability_id');
+  const selectedAircraftStatus = control.aircraft_statuses?.find(
+    (status) => String(status.applicability_id) === selectedApplicabilityId,
+  );
+
   const onSubmit = async (values: ComplianceExecutionFormValues) => {
     await createExecution.mutateAsync({
       path: {
@@ -97,7 +102,11 @@ export default function CreateAirworthinessDirectiveComplianceExecutionForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <div className="rounded-2xl border bg-muted/30 p-4">
           <p className="text-sm font-medium">{control.description || 'Control sin descripción'}</p>
-          <p className="text-xs text-muted-foreground">Estado actual: {control.compliance_status}</p>
+          <p className="text-xs text-muted-foreground">
+            {selectedAircraftStatus
+              ? `Estado de esta aeronave: ${selectedAircraftStatus.status}`
+              : `Estado agregado del control: ${control.compliance_status}`}
+          </p>
         </div>
 
         <FormField

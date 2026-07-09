@@ -161,6 +161,16 @@ export default function AirworthinessDirectiveDetailPage() {
 
   const applicableAircraft = useMemo(() => applicabilities.filter((item) => item.is_applicable), [applicabilities]);
 
+  const aircraftLabelByApplicabilityId = useMemo(() => {
+    const map = new Map<number, string>();
+
+    for (const item of applicabilities) {
+      map.set(item.id, item.aircraft?.acronym ?? `#${item.aircraft_id}`);
+    }
+
+    return map;
+  }, [applicabilities]);
+
   const executionAircraftOptions = useMemo(() => {
     const uniqueAircraft = new Map<string, { value: string; label: string }>();
 
@@ -565,7 +575,7 @@ export default function AirworthinessDirectiveDetailPage() {
                   setControlSearchInput(event.target.value);
                   setControlPage(1);
                 }}
-                placeholder="Buscar por descripción, estado o urgencia"
+                placeholder="Buscar por descripción"
                 className="h-8 min-w-0 flex-1 border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
               />
               <Select
@@ -660,6 +670,35 @@ export default function AirworthinessDirectiveDetailPage() {
                             </>
                           )}
                         </div>
+                        {control.aircraft_statuses && control.aircraft_statuses.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {control.aircraft_statuses.map((aircraftStatus) => (
+                              <Badge
+                                key={aircraftStatus.applicability_id}
+                                variant="outline"
+                                title={[
+                                  aircraftStatus.next_calendar_due_date &&
+                                    `Vence: ${formatDate(aircraftStatus.next_calendar_due_date)}`,
+                                  aircraftStatus.next_flight_hours_due != null &&
+                                    `FH: ${aircraftStatus.next_flight_hours_due}`,
+                                  aircraftStatus.next_cycles_due != null && `FC: ${aircraftStatus.next_cycles_due}`,
+                                  aircraftStatus.last_execution_date &&
+                                    `Última ejecución: ${formatDate(aircraftStatus.last_execution_date)}`,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                                className={cn(
+                                  'gap-1 text-[10px] px-1.5 py-0 leading-4',
+                                  getComplianceStatusBadgeClass(aircraftStatus.urgency),
+                                )}
+                              >
+                                {aircraftLabelByApplicabilityId.get(aircraftStatus.applicability_id) ??
+                                  `#${aircraftStatus.aircraft_id}`}
+                                <span className="text-[9px] opacity-70">{aircraftStatus.status}</span>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0 pt-0.5">
                         <Button

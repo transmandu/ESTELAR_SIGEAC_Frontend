@@ -192,8 +192,21 @@ export type AirworthinessDirectiveComplianceControlResource = {
     recurrence_interval_days: number | null;
     recurrence_interval_hours: number | null;
     recurrence_interval_cycles: number | null;
+    /**
+     * Estado derivado por flota (agregado de los estados por aeronave); la columna en BD esta deprecada
+     */
     compliance_status: string;
-    urgency?: string;
+    urgency?: 'overdue' | 'upcoming' | 'on_track' | 'closed';
+    aircraft_statuses?: Array<{
+        aircraft_id: number;
+        applicability_id: number;
+        status: string;
+        urgency: 'overdue' | 'upcoming' | 'on_track' | 'closed';
+        next_calendar_due_date: string | null;
+        next_flight_hours_due: number | null;
+        next_cycles_due: number | null;
+        last_execution_date: string | null;
+    }>;
     created_at: string;
     updated_at: string;
 };
@@ -432,7 +445,6 @@ export type BankAccount = {
     account_type: string;
     account_owner: string;
     bank_id: number;
-    company_id: number | null;
     registered_by: string | null;
     updated_by: string | null;
     registered_by_id: number | null;
@@ -509,18 +521,7 @@ export type BulkCompleteWorkOrderItemTaskRequest = {
 /**
  * Card
  */
-export type Card = {
-    id: number;
-    name: string;
-    slug: string;
-    card_number: string;
-    type: string;
-    bank_account_id: number;
-    registered_by: string | null;
-    updated_by: string | null;
-    registered_by_id: number | null;
-    updated_by_id: number | null;
-};
+export type Card = Array<string>;
 
 /**
  * Cash
@@ -4540,7 +4541,7 @@ export type AirworthinessDirectiveComplianceControlsDestroyErrors = {
         message: string;
     };
     422: {
-        message: 'Compliance control cannot be deleted because execution history exists.';
+        message: 'El control de cumplimiento no puede eliminarse porque tiene historial de ejecuciones.';
     };
 };
 
@@ -4548,7 +4549,7 @@ export type AirworthinessDirectiveComplianceControlsDestroyError = Airworthiness
 
 export type AirworthinessDirectiveComplianceControlsDestroyResponses = {
     200: {
-        message: 'Compliance control deleted successfully.';
+        message: 'Control de cumplimiento eliminado exitosamente.';
     };
 };
 
@@ -4644,8 +4645,11 @@ export type AirworthinessDirectiveComplianceControlsStoreExecutionErrors = {
 export type AirworthinessDirectiveComplianceControlsStoreExecutionError = AirworthinessDirectiveComplianceControlsStoreExecutionErrors[keyof AirworthinessDirectiveComplianceControlsStoreExecutionErrors];
 
 export type AirworthinessDirectiveComplianceControlsStoreExecutionResponses = {
-    200: {
-        [key: string]: unknown;
+    /**
+     * `AirworthinessDirectiveComplianceRecordResource`
+     */
+    201: {
+        data: AirworthinessDirectiveComplianceRecordResource;
     };
 };
 
@@ -4670,6 +4674,15 @@ export type AirworthinessDirectivesComplianceControlsErrors = {
      * Unauthenticated
      */
     401: {
+        /**
+         * Error overview.
+         */
+        message: string;
+    };
+    /**
+     * Not found
+     */
+    404: {
         /**
          * Error overview.
          */
@@ -13906,42 +13919,14 @@ export type MaintenanceControlsAlertsResponses = {
             control: MaintenanceControlResource;
             last_execution: MaintenanceControlExecutionResource;
             metrics: Array<{
-                type: 'FH';
-                /**
-                 * remaining
-                 */
-                remaining: number;
-                /**
-                 * percentage
-                 */
-                percentage: number;
-                /**
-                 * consumed
-                 */
-                consumed: number;
-                status: MaintenanceAlertStatus;
-            } | {
-                type: 'FC';
-                /**
-                 * remaining
-                 */
-                remaining: number;
-                /**
-                 * percentage
-                 */
-                percentage: number;
-                /**
-                 * consumed
-                 */
-                consumed: number;
-                status: MaintenanceAlertStatus;
-            } | {
-                type: 'DAYS';
-                remaining: number;
-                percentage: number;
-                consumed: number;
-                status: MaintenanceAlertStatus;
+                type: string;
+                due_date: string;
+                remaining: string;
+                consumed: string;
+                percentage: string;
+                status: string;
             }>;
+            worst_case: string;
             status: MaintenanceAlertStatus;
         }>;
         total: number;
