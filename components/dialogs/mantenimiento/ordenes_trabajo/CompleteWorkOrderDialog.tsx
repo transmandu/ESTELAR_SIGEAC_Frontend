@@ -24,12 +24,13 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
   maintenanceControlExecutionsIndexQueryKey,
+  planificationWorkOrderConformityUploadMutation,
   workOrderBulkCompleteItemTasksMutation,
   workOrderCloseMutation,
   workOrdersShowQueryKey,
 } from '@api/queries';
 import { WorkOrderItemTaskResource, WorkOrderResource } from '@api/types';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, FileUp, Loader2, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -65,6 +66,7 @@ const hasCompleteValues = (values?: PendingTaskFormValues) =>
   Boolean(values?.review_by?.trim() && values?.inspection_date);
 
 export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenChange }: CompleteWorkOrderDialogProps) {
+  const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [taskValues, setTaskValues] = useState<Record<number, PendingTaskFormValues>>({});
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
@@ -188,6 +190,10 @@ export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenCh
     setSelectedTaskIds((prev) => prev.filter((taskId) => unfilledIds.has(taskId)));
   }, [unfilledPendingTasks]);
 
+  const uploadConformityMutation = useMutation({
+    ...planificationWorkOrderConformityUploadMutation(),
+  });
+
   const closeWorkOrderMutation = useMutation({
     ...workOrderCloseMutation(),
     async onSuccess(data, variables, onMutateResult, context) {
@@ -236,6 +242,21 @@ export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenCh
         exit_date: values.exit_date,
       },
     });
+
+    if (csmFile) {
+      try {
+        await uploadConformityMutation.mutateAsync({
+          path: { order_number: orderNumber },
+          body: { conformity_file: csmFile },
+        });
+        await queryClient.invalidateQueries({ queryKey: workOrdersShowQueryKey({ path: { orderNumber } }) });
+        toast.success('Documento de conformidad cargado correctamente.');
+      } catch {
+        toast.error(
+          'La orden se cerró, pero no se pudo subir el documento de conformidad. Puede reintentarlo desde el detalle de la orden.',
+        );
+      }
+    }
   });
 
   const isSubmitting = closeWorkOrderMutation.isPending;
@@ -308,12 +329,12 @@ export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenCh
             <DialogDescription>
               {pendingTasks.length > 0
                 ? 'Debe completar las task cards pendientes antes de cerrar la orden.'
-                : 'Todas las task cards han sido completadas. Adjunte el documento CSM para cerrar la orden.'}
+                : 'Todas las task cards han sido completadas. Adjunte el documento para cerrar la orden.'}
             </DialogDescription>
           </DialogHeader>
 
           {pendingTasks.length === 0 && (
-            <div className="space-y-4">
+            <div className="min-h-0 space-y-4 overflow-y-auto">
               <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-700 dark:text-emerald-300">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <p>No hay task cards pendientes. La orden está lista para ser completada.</p>
@@ -321,7 +342,7 @@ export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenCh
 
               <div className="space-y-3 rounded-md border p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Documento CSM
+                  Documento
                 </p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -364,7 +385,7 @@ export function CompleteWorkOrderDialog({ open, workOrder, orderNumber, onOpenCh
 
                     {csmPreviewUrl && (
                       <div className="overflow-hidden rounded-md border">
-                        <iframe src={csmPreviewUrl} className="h-[400px] w-full" title="Vista previa del CSM" />
+                        <iframe src={csmPreviewUrl} className="h-[400px] w-full" title="Vista previa del Documento" />
                       </div>
                     )}
                   </div>

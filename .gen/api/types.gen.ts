@@ -161,7 +161,7 @@ export type AircraftTypeResource = {
     iata_code: string | null;
     created_at: string | null;
     updated_at: string | null;
-    image: 'https://cdn.zbordirect.com/images/airlines/ES.webp';
+    image: string;
 };
 
 /**
@@ -563,6 +563,19 @@ export type CertificateResource = {
 export type Client = Array<string>;
 
 /**
+ * CloseWorkOrderRequest
+ */
+export type CloseWorkOrderRequest = {
+    entry_date?: string | null;
+    exit_date?: string | null;
+    /**
+     * FH/FC de la aeronave al momento del trabajo; si no vienen se usan los actuales
+     */
+    aircraft_flight_hours?: number | null;
+    aircraft_flight_cycles?: number | null;
+};
+
+/**
  * Company
  */
 export type Company = {
@@ -747,6 +760,7 @@ export type DocumentGenerationMetadataResource = {
     file_path: string | null;
     error: string | null;
     failed_at: string | null;
+    is_final: boolean;
 };
 
 /**
@@ -2316,6 +2330,13 @@ export type UpdateVoluntaryReportRequest = {
 };
 
 /**
+ * UploadConformityFileRequest
+ */
+export type UploadConformityFileRequest = {
+    conformity_file: Blob | File;
+};
+
+/**
  * UserRequest
  */
 export type UserRequest = {
@@ -2526,6 +2547,9 @@ export type WorkOrderResource = {
     entry_date: string;
     exit_date: string;
     remarks: string | null;
+    has_conformity_document: boolean;
+    conformity_uploaded_at: string | null;
+    conformity_download_url?: string;
     aircraft?: AircraftResource;
     items_count?: number;
     items?: Array<WorkOrderItemResource>;
@@ -23467,10 +23491,7 @@ export type WarehouseWarehouseWithUserResponses = {
 export type WarehouseWarehouseWithUserResponse = WarehouseWarehouseWithUserResponses[keyof WarehouseWarehouseWithUserResponses];
 
 export type WorkOrderCloseData = {
-    body?: {
-        entry_date?: string | null;
-        exit_date?: string | null;
-    };
+    body?: CloseWorkOrderRequest;
     path: {
         order_number: string;
     };
@@ -23510,19 +23531,102 @@ export type WorkOrderCloseError = WorkOrderCloseErrors[keyof WorkOrderCloseError
 export type WorkOrderCloseResponses = {
     200: {
         message: 'Orden de trabajo completada exitosamente.';
-        document_generation_id: string;
-        document_enqueue_state: string;
-        document_regenerated: string;
         status_url: string;
-        tally_sheet_generation_id: string;
-        tally_sheet_enqueue_state: string;
-        tally_sheet_regenerated: string;
         tally_sheet_status_url: string;
         tally_sheet_download_url: string;
     };
 };
 
 export type WorkOrderCloseResponse = WorkOrderCloseResponses[keyof WorkOrderCloseResponses];
+
+export type PlanificationWorkOrderConformityDownloadData = {
+    body?: never;
+    path: {
+        order_number: string;
+    };
+    query?: never;
+    url: '/work-orders/{order_number}/conformity';
+};
+
+export type PlanificationWorkOrderConformityDownloadErrors = {
+    /**
+     * Unauthenticated
+     */
+    401: {
+        /**
+         * Error overview.
+         */
+        message: string;
+    };
+    404: {
+        message: 'La orden no tiene documento de conformidad.';
+    };
+};
+
+export type PlanificationWorkOrderConformityDownloadError = PlanificationWorkOrderConformityDownloadErrors[keyof PlanificationWorkOrderConformityDownloadErrors];
+
+export type PlanificationWorkOrderConformityDownloadResponses = {
+    200: Blob | File;
+};
+
+export type PlanificationWorkOrderConformityDownloadResponse = PlanificationWorkOrderConformityDownloadResponses[keyof PlanificationWorkOrderConformityDownloadResponses];
+
+export type PlanificationWorkOrderConformityUploadData = {
+    body: UploadConformityFileRequest;
+    path: {
+        order_number: string;
+    };
+    query?: never;
+    url: '/work-orders/{order_number}/conformity';
+};
+
+export type PlanificationWorkOrderConformityUploadErrors = {
+    /**
+     * Unauthenticated
+     */
+    401: {
+        /**
+         * Error overview.
+         */
+        message: string;
+    };
+    /**
+     * Validation error
+     */
+    422: {
+        /**
+         * Errors overview.
+         */
+        message: string;
+        /**
+         * A detailed description of each field that failed validation.
+         */
+        errors: {
+            [key: string]: Array<string>;
+        };
+    };
+    /**
+     * An error
+     */
+    500: {
+        /**
+         * Error overview.
+         */
+        message: string;
+    };
+};
+
+export type PlanificationWorkOrderConformityUploadError = PlanificationWorkOrderConformityUploadErrors[keyof PlanificationWorkOrderConformityUploadErrors];
+
+export type PlanificationWorkOrderConformityUploadResponses = {
+    200: {
+        message: 'Documento de conformidad almacenado exitosamente.';
+        conformity_uploaded_at: string;
+        conformity_download_url: string;
+    };
+};
+
+export type PlanificationWorkOrderConformityUploadResponse = PlanificationWorkOrderConformityUploadResponses[keyof PlanificationWorkOrderConformityUploadResponses];
 
 export type WorkOrderCompleteItemTaskData = {
     body: CompleteWorkOrderItemTaskRequest;
@@ -23542,10 +23646,6 @@ export type WorkOrderCompleteItemTaskErrors = {
          * Error overview.
          */
         message: string;
-    };
-    404: {
-        message: 'La tarea no pertenece a este work order o no existe.';
-        missing_id: string;
     };
     /**
      * Validation error
@@ -23568,8 +23668,7 @@ export type WorkOrderCompleteItemTaskError = WorkOrderCompleteItemTaskErrors[key
 
 export type WorkOrderCompleteItemTaskResponses = {
     200: {
-        message: 'Tarea completada exitosamente.';
-        completed_id: string;
+        [key: string]: unknown;
     };
 };
 
@@ -23594,10 +23693,6 @@ export type WorkOrderBulkCompleteItemTasksErrors = {
          */
         message: string;
     };
-    404: {
-        message: 'Algunas tareas no pertenecen a este work order o no existen.';
-        missing_ids: Array<unknown>;
-    };
     /**
      * Validation error
      */
@@ -23619,8 +23714,7 @@ export type WorkOrderBulkCompleteItemTasksError = WorkOrderBulkCompleteItemTasks
 
 export type WorkOrderBulkCompleteItemTasksResponses = {
     200: {
-        message: 'Tarea(s) completada(s) con la misma fecha y revisión.';
-        completed_ids: string;
+        [key: string]: unknown;
     };
 };
 
@@ -24020,66 +24114,6 @@ export type WorkOrdersShowResponses = {
 };
 
 export type WorkOrdersShowResponse = WorkOrdersShowResponses[keyof WorkOrdersShowResponses];
-
-export type WorkOrderTaskEventStoreData = {
-    body?: never;
-    path: {
-        company: string;
-        work_order_task: string;
-    };
-    query?: never;
-    url: '/{company}/{work_order_task}/store-work-order-task-event';
-};
-
-export type WorkOrderTaskEventStoreErrors = {
-    /**
-     * Unauthenticated
-     */
-    401: {
-        /**
-         * Error overview.
-         */
-        message: string;
-    };
-};
-
-export type WorkOrderTaskEventStoreError = WorkOrderTaskEventStoreErrors[keyof WorkOrderTaskEventStoreErrors];
-
-export type WorkOrderTaskEventStoreResponses = {
-    200: string;
-};
-
-export type WorkOrderTaskEventStoreResponse = WorkOrderTaskEventStoreResponses[keyof WorkOrderTaskEventStoreResponses];
-
-export type WorkOrderTaskEventShowEventsByWorkOrderTaskData = {
-    body?: never;
-    path: {
-        company: string;
-        work_order_task: string;
-    };
-    query?: never;
-    url: '/{company}/{work_order_task}/show-events-by-work-order-task';
-};
-
-export type WorkOrderTaskEventShowEventsByWorkOrderTaskErrors = {
-    /**
-     * Unauthenticated
-     */
-    401: {
-        /**
-         * Error overview.
-         */
-        message: string;
-    };
-};
-
-export type WorkOrderTaskEventShowEventsByWorkOrderTaskError = WorkOrderTaskEventShowEventsByWorkOrderTaskErrors[keyof WorkOrderTaskEventShowEventsByWorkOrderTaskErrors];
-
-export type WorkOrderTaskEventShowEventsByWorkOrderTaskResponses = {
-    200: string;
-};
-
-export type WorkOrderTaskEventShowEventsByWorkOrderTaskResponse = WorkOrderTaskEventShowEventsByWorkOrderTaskResponses[keyof WorkOrderTaskEventShowEventsByWorkOrderTaskResponses];
 
 export type WorkshopsIndexData = {
     body?: never;

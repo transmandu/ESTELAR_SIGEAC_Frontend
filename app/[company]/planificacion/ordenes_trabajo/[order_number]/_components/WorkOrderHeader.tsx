@@ -1,15 +1,19 @@
 'use client';
 
-import { DocumentDownloadButton } from '@/components/misc/DocumentDownloadButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useWorkOrderDocuments } from '@/hooks/planificacion/useWorkOrderDocuments';
+import { useWorkOrderDocuments, type DocumentType } from '@/hooks/planificacion/useWorkOrderDocuments';
 import { cn } from '@/lib/utils';
 import { useCompanySlug } from '@/stores/CompanyStore';
+import { planificationWorkOrderDocumentDownload } from '@api/index';
 import { WorkOrderResource } from '@api/types';
-import { AlertCircleIcon, ArrowLeft, CheckCircle2, CheckCircle2Icon, ClipboardList, RotateCcwIcon } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { ConformityDocumentCard } from './ConformityDocumentCard';
 import { getStatusConfig } from './constants';
+import { DocumentPill, type DocumentPillState } from './DocumentPill';
 import { timestampEqualSecondsPrecision } from './WorkOrderHelpers';
 
 interface WorkOrderHeaderProps {
@@ -18,30 +22,98 @@ interface WorkOrderHeaderProps {
   onCompleteWorkOrder: () => void;
 }
 
+const DOC_LABELS: Record<DocumentType, { label: string; fileName: string }> = {
+  work_order: { label: 'Orden de Trabajo', fileName: 'orden-trabajo' },
+  tally_sheet: { label: 'Tally Sheet', fileName: 'tally-sheet' },
+};
+
 export function WorkOrderHeader({ order_number, wo, onCompleteWorkOrder }: WorkOrderHeaderProps) {
   const companySlug = useCompanySlug();
+  const [downloadingType, setDownloadingType] = useState<DocumentType | null>(null);
 
   const { workOrder, tallySheet, queueDocument, mutations } = useWorkOrderDocuments(order_number);
-
-  const workOrderIsCompleted = workOrder.isCompleted;
-  const workOrderIsFailed = workOrder.isFailed;
-
-  const tallySheetIsCompleted = tallySheet.isCompleted;
-  const tallySheetIsFailed = tallySheet.isFailed;
 
   const statusRaw = wo?.status?.toUpperCase() ?? '';
   const statusCfg = getStatusConfig(statusRaw);
 
-  const workOrderStale = Boolean(
-    workOrder.statusData?.work_order_updated_at &&
-      wo.updated_at &&
-      !timestampEqualSecondsPrecision(workOrder.statusData.work_order_updated_at, wo?.updated_at),
-  );
-  const tallySheetStale = Boolean(
-    tallySheet.statusData?.work_order_updated_at &&
-      wo.updated_at &&
-      !timestampEqualSecondsPrecision(tallySheet.statusData.work_order_updated_at, wo?.updated_at),
-  );
+  const downloadPdf = async (type: DocumentType) => {
+    setDownloadingType(type);
+    try {
+      const response = await planificationWorkOrderDocumentDownload({
+        path: { order_number, document_type: type },
+        throwOnError: true,
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${DOC_LABELS[type].fileName}-${order_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('PDF descargado exitosamente.');
+    } catch {
+      toast.error('Error al descargar el PDF.');
+    } finally {
+      setDownloadingType(null);
+    }
+  };
+
+  const documentPills = ([
+    { type: 'work_order' as const, doc: workOrder, isQueueing: mutations.workOrderQueue.status === 'pending' },
+    { type: 'tally_sheet' as const, doc: tallySheet, isQueueing: mutations.tallySheetQueue.status === 'pending' },
+  ] as const).map(({ type, doc, isQueueing }) => {
+    const isFinal = Boolean(doc.statusData?.is_final);
+    const stale =
+      !isFinal &&
+      Boolean(
+        doc.statusData?.work_order_updated_at &&
+          wo.updated_at &&
+          !timestampEqualSecondsPrecision(doc.statusData.work_order_updated_at, wo?.updated_at),
+      );
+
+    const state: DocumentPillState =
+      doc.isGenerating || isQueueing
+        ? 'generating'
+        : doc.isFailed
+          ? 'failed'
+          : doc.isCompleted
+            ? stale
+              ? 'stale'
+              : 'ready'
+            : 'missing';
+
+    const actions = [];
+    if (doc.isCompleted) {
+      actions.push({
+        label: 'Descargar',
+        onClick: () => downloadPdf(type),
+        disabled: downloadingType === type,
+      });
+    }
+    if (!isFinal && !doc.isGenerating && (doc.isNotGenerated || doc.isFailed || stale)) {
+      actions.push({
+        label: doc.isFailed ? 'Reintentar' : stale ? 'Regenerar' : 'Generar',
+        onClick: () => queueDocument(type),
+        disabled: isQueueing,
+      });
+    }
+
+    const title = isFinal
+      ? 'Documento final generado al cierre (inalterable)'
+      : doc.isGenerating
+        ? 'Generando documento PDF...'
+        : stale
+          ? 'Documento PDF desactualizado respecto a la orden'
+          : doc.isFailed
+            ? 'Error al generar el documento PDF'
+            : doc.isCompleted
+              ? 'Documento PDF listo para descargar'
+              : 'Documento aún no generado';
+
+    return <DocumentPill key={type} label={DOC_LABELS[type].label} state={state} title={title} actions={actions} />;
+  });
 
   return (
     <>
@@ -69,110 +141,22 @@ export function WorkOrderHeader({ order_number, wo, onCompleteWorkOrder }: WorkO
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            className="flex-1 h-8 gap-1.5 text-xs"
-            onClick={onCompleteWorkOrder}
-            disabled={statusRaw === 'CERRADO'}
-          >
-            <CheckCircle2 className="size-3.5" />
-            {statusRaw === 'CERRADO' ? 'Orden completada' : 'Completar orden'}
-          </Button>
-          <DocumentDownloadButton
-            type="work_order"
-            orderNumber={order_number}
-            isCompleted={workOrderIsCompleted}
-            isFailed={workOrderIsFailed}
-            isPending={mutations.workOrderQueue.status === 'pending'}
-            onQueue={() => queueDocument('work_order')}
-            disabled={mutations.workOrderQueue.status === 'pending'}
-            stale={workOrderStale}
-          />
-          <DocumentDownloadButton
-            type="tally_sheet"
-            orderNumber={order_number}
-            isCompleted={tallySheetIsCompleted}
-            isFailed={tallySheetIsFailed}
-            isPending={mutations.tallySheetQueue.status === 'pending'}
-            onQueue={() => queueDocument('tally_sheet')}
-            disabled={mutations.tallySheetQueue.status === 'pending'}
-            stale={tallySheetStale}
-          />
-        </div>
+        <Button
+          variant="default"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={onCompleteWorkOrder}
+          disabled={statusRaw === 'CERRADO'}
+        >
+          <CheckCircle2 className="size-3.5" />
+          {statusRaw === 'CERRADO' ? 'Orden completada' : 'Completar orden'}
+        </Button>
       </div>
 
-      {(!workOrder.isNotGenerated || !tallySheet.isNotGenerated) && (
-        <div className="space-y-3">
-          {[
-            {
-              label: 'Orden de Trabajo',
-              type: 'work_order' as const,
-              stale: workOrderStale,
-              ...workOrder,
-            },
-            {
-              label: 'Tally Sheet',
-              type: 'tally_sheet' as const,
-              stale: tallySheetStale,
-              ...tallySheet,
-            },
-          ].map((doc) => {
-            if (doc.isNotGenerated) return null;
-
-            return (
-              <div
-                key={doc.label}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
-                  doc.isGenerating && 'border-sky-500/30 bg-sky-500/5 text-sky-600 dark:text-sky-400',
-                  doc.isCompleted &&
-                    !doc.stale &&
-                    'border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400',
-                  doc.isCompleted &&
-                    doc.stale &&
-                    'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                  doc.isFailed && 'border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-400',
-                )}
-              >
-                {doc.isGenerating && <RotateCcwIcon className="size-4 animate-spin" />}
-                {doc.isCompleted && <CheckCircle2Icon className="size-4" />}
-                {doc.isFailed && <AlertCircleIcon className="size-4" />}
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <span className="font-medium">{doc.label}</span>
-                  <span>
-                    {doc.isGenerating
-                      ? 'Generando documento PDF...'
-                      : doc.isCompleted
-                        ? doc.stale
-                          ? 'Documento PDF listo (desactualizado)'
-                          : 'Documento PDF listo para descargar'
-                        : doc.isFailed
-                          ? 'Error al generar el documento PDF'
-                          : 'Preparando generación...'}
-                  </span>
-                  {doc.statusError ? (
-                    <span className="text-xs font-medium text-red-600 dark:text-red-400">{doc.statusError}</span>
-                  ) : null}
-                </div>
-                {(doc.isCompleted || doc.isFailed) && (
-                  <DocumentDownloadButton
-                    type={doc.type}
-                    orderNumber={order_number}
-                    isCompleted={doc.isCompleted}
-                    isFailed={doc.isFailed}
-                    isPending={false}
-                    onQueue={() => queueDocument(doc.type)}
-                    disabled={false}
-                    stale={doc.stale}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {documentPills}
+        <ConformityDocumentCard order_number={order_number} wo={wo} />
+      </div>
     </>
   );
 }

@@ -46,8 +46,7 @@ export function useWorkOrderDocuments(orderNumber: string) {
       path: { order_number: orderNumber ?? '', document_type: 'work_order' },
     }),
     enabled: Boolean(orderNumber),
-    retry: false,
-    refetchInterval: false,
+    refetchOnWindowFocus: true,
   });
 
   const tallySheetStatusQuery = useQuery({
@@ -55,8 +54,7 @@ export function useWorkOrderDocuments(orderNumber: string) {
       path: { order_number: orderNumber ?? '', document_type: 'tally_sheet' },
     }),
     enabled: Boolean(orderNumber),
-    retry: false,
-    refetchInterval: false,
+    refetchOnWindowFocus: true,
   });
 
   const workOrderStatusError = workOrderStatusQuery.error
