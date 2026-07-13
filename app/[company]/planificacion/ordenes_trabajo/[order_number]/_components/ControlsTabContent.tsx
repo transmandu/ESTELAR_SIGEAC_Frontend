@@ -13,9 +13,10 @@ interface ControlsTabContentProps {
   orderNumber: string;
   pendingTasksCount: number;
   onBulkComplete: () => void;
+  isWorkOrderClosed?: boolean;
 }
 
-export function ControlsTabContent({ items, orderNumber, pendingTasksCount, onBulkComplete }: ControlsTabContentProps) {
+export function ControlsTabContent({ items, orderNumber, pendingTasksCount, onBulkComplete, isWorkOrderClosed }: ControlsTabContentProps) {
   const [search, setSearch] = useState('');
 
   const filteredData = useMemo(() => {
@@ -91,7 +92,7 @@ export function ControlsTabContent({ items, orderNumber, pendingTasksCount, onBu
           </div>
           <Accordion type="multiple">
             {filteredData.map(({ item, filteredTasks }) => (
-              <ControlAccordionItem key={item.id} item={item} orderNumber={orderNumber} filteredTasks={filteredTasks} />
+              <ControlAccordionItem key={item.id} item={item} orderNumber={orderNumber} filteredTasks={filteredTasks} isWorkOrderClosed={isWorkOrderClosed} />
             ))}
           </Accordion>
         </div>

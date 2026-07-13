@@ -29,6 +29,7 @@ interface NonRoutineTaskFormDialogProps {
   onOpenChange: (open: boolean) => void;
   task?: NonRoutineTaskResource | null;
   orderNumber?: string;
+  isWorkOrderClosed?: boolean;
 }
 
 export function NonRoutineTaskFormDialog({
@@ -37,6 +38,7 @@ export function NonRoutineTaskFormDialog({
   onOpenChange,
   task = null,
   orderNumber,
+  isWorkOrderClosed,
 }: NonRoutineTaskFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createMutation = useCreateNonRoutineTaskMutation(orderNumber);
@@ -101,65 +103,72 @@ export function NonRoutineTaskFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="finding"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hallazgo</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describa el hallazgo..." className="resize-none" rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {isWorkOrderClosed && !task ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+            No se pueden crear tareas no rutinarias porque la orden de trabajo está cerrada.
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="finding"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hallazgo</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describa el hallazgo..." className="resize-none" rows={3} {...field} disabled={isWorkOrderClosed} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="work_to_perform"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Trabajo a Realizar</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describa el trabajo a realizar..."
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="work_to_perform"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Trabajo a Realizar</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describa el trabajo a realizar..."
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                        disabled={isWorkOrderClosed}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="remarks"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observaciones (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Agregue observaciones..." className="resize-none" rows={2} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="remarks"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observaciones (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Agregue observaciones..." className="resize-none" rows={2} {...field} disabled={isWorkOrderClosed} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Guardando...' : 'Guardar'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting || isWorkOrderClosed}>
+                  {isSubmitting ? 'Guardando...' : 'Guardar'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

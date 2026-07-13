@@ -23,6 +23,7 @@ interface WorkOrderTabsProps {
 export function WorkOrderTabs({ workOrder, orderNumber, onBulkComplete }: WorkOrderTabsProps) {
   const [activeTab, setActiveTab] = useState('controles');
 
+  const isWorkOrderClosed = workOrder.status === 'CERRADO';
   const items = useMemo(() => workOrder.items ?? [], [workOrder.items]);
   const componentItems = useMemo(() => workOrder.component_items ?? [], [workOrder.component_items]);
   const directiveItems = useMemo(() => workOrder.directive_items ?? [], [workOrder.directive_items]);
@@ -73,7 +74,7 @@ export function WorkOrderTabs({ workOrder, orderNumber, onBulkComplete }: WorkOr
 
       <TabsContent value="controles" className="mt-4">
         <section className="overflow-hidden rounded-lg border bg-background">
-          <ControlsTabContent items={items} orderNumber={orderNumber} pendingTasksCount={pendingTasksCount} onBulkComplete={onBulkComplete} />
+          <ControlsTabContent items={items} orderNumber={orderNumber} pendingTasksCount={pendingTasksCount} onBulkComplete={onBulkComplete} isWorkOrderClosed={isWorkOrderClosed} />
         </section>
       </TabsContent>
 

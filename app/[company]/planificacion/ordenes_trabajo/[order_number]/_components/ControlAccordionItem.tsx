@@ -35,10 +35,12 @@ export function ControlAccordionItem({
   item,
   orderNumber,
   filteredTasks,
+  isWorkOrderClosed,
 }: {
   item: WorkOrderItemResource;
   orderNumber: string;
   filteredTasks?: WorkOrderItemTaskResource[];
+  isWorkOrderClosed?: boolean;
 }) {
   const control = item.maintenance_control;
   const tasks = filteredTasks ?? item.tasks ?? [];
@@ -120,29 +122,34 @@ export function ControlAccordionItem({
                   )}
 
                   <div className="flex shrink-0 items-center gap-1">
-                    <TooltipProvider>
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-foreground relative"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNrtTaskId(task.id);
-                            }}
-                          >
-                            <Wrench className="size-3" />
-                            {(task.non_routine_tasks?.length ?? 0) > 0 && (
-                              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-amber-500 px-1 text-[8px] font-semibold text-white leading-none">
-                                {task.non_routine_tasks?.length}
-                              </span>
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Tareas no rutinarias</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip delayDuration={100}>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-foreground relative"
+                                      disabled={isWorkOrderClosed}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setNrtTaskId(task.id);
+                                      }}
+                                    >
+                                      <Wrench className="size-3" />
+                                      {(task.non_routine_tasks?.length ?? 0) > 0 && (
+                                        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-amber-500 px-1 text-[8px] font-semibold text-white leading-none">
+                                          {task.non_routine_tasks?.length}
+                                        </span>
+                                      )}
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  {isWorkOrderClosed ? 'La orden de trabajo está cerrada' : 'Tareas no rutinarias'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                     {!task.review_by ? (
                       <TooltipProvider>
                         <Tooltip delayDuration={100}>
@@ -196,6 +203,7 @@ export function ControlAccordionItem({
         isOpen={nrtTaskId !== null}
         onOpenChange={(open) => { if (!open) setNrtTaskId(null); }}
         orderNumber={orderNumber}
+        isWorkOrderClosed={isWorkOrderClosed}
       />
     </AccordionItem>
   );
