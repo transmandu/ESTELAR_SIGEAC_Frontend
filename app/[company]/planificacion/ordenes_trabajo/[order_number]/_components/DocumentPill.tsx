@@ -18,6 +18,7 @@ type DocumentPillAction = {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  icon?: LucideIcon;
 };
 
 type DocumentPillProps = {
@@ -42,10 +43,11 @@ export function DocumentPill({ label, state, title, actions }: DocumentPillProps
           key={action.label}
           variant="ghost"
           size="sm"
-          className="h-6 rounded-full px-2 text-[11px] font-semibold"
+          className="h-6 gap-1 rounded-full px-2 text-[11px] font-semibold"
           onClick={action.onClick}
           disabled={action.disabled}
         >
+          {action.icon && <action.icon className="size-3" />}
           {action.label}
         </Button>
       ))}

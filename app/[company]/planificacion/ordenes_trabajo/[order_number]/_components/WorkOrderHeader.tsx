@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useCompanySlug } from '@/stores/CompanyStore';
 import { planificationWorkOrderDocumentDownload } from '@api/index';
 import { WorkOrderResource } from '@api/types';
-import { ArrowLeft, CheckCircle2, ClipboardList } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ClipboardList, Download, RotateCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -60,17 +60,19 @@ export function WorkOrderHeader({ order_number, wo, onCompleteWorkOrder }: WorkO
     }
   };
 
-  const documentPills = ([
-    { type: 'work_order' as const, doc: workOrder, isQueueing: mutations.workOrderQueue.status === 'pending' },
-    { type: 'tally_sheet' as const, doc: tallySheet, isQueueing: mutations.tallySheetQueue.status === 'pending' },
-  ] as const).map(({ type, doc, isQueueing }) => {
+  const documentPills = (
+    [
+      { type: 'work_order' as const, doc: workOrder, isQueueing: mutations.workOrderQueue.status === 'pending' },
+      { type: 'tally_sheet' as const, doc: tallySheet, isQueueing: mutations.tallySheetQueue.status === 'pending' },
+    ] as const
+  ).map(({ type, doc, isQueueing }) => {
     const isFinal = Boolean(doc.statusData?.is_final);
     const stale =
       !isFinal &&
       Boolean(
         doc.statusData?.work_order_updated_at &&
-          wo.updated_at &&
-          !timestampEqualSecondsPrecision(doc.statusData.work_order_updated_at, wo?.updated_at),
+        wo.updated_at &&
+        !timestampEqualSecondsPrecision(doc.statusData.work_order_updated_at, wo?.updated_at),
       );
 
     const state: DocumentPillState =
@@ -88,6 +90,7 @@ export function WorkOrderHeader({ order_number, wo, onCompleteWorkOrder }: WorkO
     if (doc.isCompleted) {
       actions.push({
         label: 'Descargar',
+        icon: Download,
         onClick: () => downloadPdf(type),
         disabled: downloadingType === type,
       });
@@ -95,6 +98,7 @@ export function WorkOrderHeader({ order_number, wo, onCompleteWorkOrder }: WorkO
     if (!isFinal && !doc.isGenerating && (doc.isNotGenerated || doc.isFailed || stale)) {
       actions.push({
         label: doc.isFailed ? 'Reintentar' : stale ? 'Regenerar' : 'Generar',
+        icon: stale || doc.isFailed ? RotateCw : Sparkles,
         onClick: () => queueDocument(type),
         disabled: isQueueing,
       });

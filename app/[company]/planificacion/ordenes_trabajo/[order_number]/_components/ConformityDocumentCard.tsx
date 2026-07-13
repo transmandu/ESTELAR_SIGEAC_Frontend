@@ -4,6 +4,7 @@ import { planificationWorkOrderConformityDownload } from '@api/index';
 import { planificationWorkOrderConformityUploadMutation, workOrdersShowQueryKey } from '@api/queries';
 import { WorkOrderResource } from '@api/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Download, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DocumentPill } from './DocumentPill';
@@ -73,8 +74,9 @@ export function ConformityDocumentCard({ order_number, wo }: ConformityDocumentC
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('PDF descargado exitosamente.');
-    } catch {
-      toast.error('Error al descargar el documento de conformidad.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error al descargar el documento de conformidad.');
+      await queryClient.invalidateQueries({ queryKey: workOrdersShowQueryKey({ path: { orderNumber: order_number } }) });
     } finally {
       setIsDownloading(false);
     }
@@ -92,8 +94,15 @@ export function ConformityDocumentCard({ order_number, wo }: ConformityDocumentC
         }
         actions={
           hasDocument
-            ? [{ label: 'Descargar', onClick: downloadPdf, disabled: isDownloading }]
-            : [{ label: 'Subir', onClick: () => inputRef.current?.click(), disabled: uploadMutation.isPending }]
+            ? [{ label: 'Descargar', icon: Download, onClick: downloadPdf, disabled: isDownloading }]
+            : [
+                {
+                  label: 'Subir',
+                  icon: Upload,
+                  onClick: () => inputRef.current?.click(),
+                  disabled: uploadMutation.isPending,
+                },
+              ]
         }
       />
       {!hasDocument && (
