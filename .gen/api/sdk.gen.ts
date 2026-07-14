@@ -459,7 +459,7 @@ export const aircraftComponentSlotStore = <ThrowOnError extends boolean = false>
 });
 
 /**
- * Destroy with relation checks. If related installations or intervals exist, return explanatory message
+ * Destroy with relation checks. If installation history or pending requests exist, return explanatory message
  */
 export const aircraftComponentSlotDestroy = <ThrowOnError extends boolean = false>(options: Options<AircraftComponentSlotDestroyData, ThrowOnError>): RequestResult<AircraftComponentSlotDestroyResponses, AircraftComponentSlotDestroyErrors, ThrowOnError> => (options.client ?? client).delete<AircraftComponentSlotDestroyResponses, AircraftComponentSlotDestroyErrors, ThrowOnError>({
     responseType: 'json',
@@ -2874,6 +2874,17 @@ export const hardTimeIntervalIndex = <ThrowOnError extends boolean = false>(opti
 });
 
 /**
+ * List paginated compliances for an interval.
+ * GET /hard-time-intervals/{id}/compliances
+ */
+export const hardTimeIntervalCompliances = <ThrowOnError extends boolean = false>(options: Options<HardTimeIntervalCompliancesData, ThrowOnError>): RequestResult<HardTimeIntervalCompliancesResponses, HardTimeIntervalCompliancesErrors, ThrowOnError> => (options.client ?? client).get<HardTimeIntervalCompliancesResponses, HardTimeIntervalCompliancesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/hard-time-intervals/{id}/compliances',
+    ...options
+});
+
+/**
  * Create a new interval for a component.
  * POST /hard-time-components/{id}/intervals
  */
@@ -2911,17 +2922,6 @@ export const hardTimeIntervalToggle = <ThrowOnError extends boolean = false>(opt
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/hard-time-intervals/{id}/toggle',
-    ...options
-});
-
-/**
- * List paginated compliances for an interval.
- * GET /hard-time-intervals/{id}/compliances
- */
-export const hardTimeIntervalCompliances = <ThrowOnError extends boolean = false>(options: Options<HardTimeIntervalCompliancesData, ThrowOnError>): RequestResult<HardTimeIntervalCompliancesResponses, HardTimeIntervalCompliancesErrors, ThrowOnError> => (options.client ?? client).get<HardTimeIntervalCompliancesResponses, HardTimeIntervalCompliancesErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/hard-time-intervals/{id}/compliances',
     ...options
 });
 

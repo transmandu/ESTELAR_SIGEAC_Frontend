@@ -12,10 +12,8 @@ import {
   hardTimeIntervalToggleMutation,
 } from '@api/queries';
 import {
-  aircraftComponentSlotStore,
   hardTimeComplianceStore,
   hardTimeInstallationUninstall,
-  hardTimeIntervalStore,
   hardTimeIntervalUpdate,
 } from '@api/sdk.gen';
 import {
@@ -26,20 +24,6 @@ import {
 } from '@api/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-
-export type HardTimeImportStructureComponentInput = {
-  part_number: string;
-  description: string;
-  position: string;
-  ata_chapter?: string;
-  intervals: StoreIntervalRequest[];
-};
-
-export type HardTimeImportStructureRequest = {
-  aircraft_id: number;
-  category_code: string;
-  components: HardTimeImportStructureComponentInput[];
-};
 
 export const useInstallHardTimeComponent = (componentId: number, aircraftId: number | null) => {
   const queryClient = useQueryClient();
@@ -131,10 +115,10 @@ export const useUpdateHardTimeInterval = (intervalId: number, componentId: numbe
   });
 };
 
-export const useToggleHardTimeInterval = (intervalId: number, componentId: number, aircraftId: number | null) => {
+export const useToggleHardTimeInterval = (componentId: number, aircraftId: number | null) => {
   const queryClient = useQueryClient();
   return useMutation({
-    ...hardTimeIntervalToggleMutation({ path: { id: intervalId } }),
+    ...hardTimeIntervalToggleMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: aircraftComponentSlotIndexQueryKey({ query: { aircraft_id: aircraftId! } }),
@@ -172,58 +156,6 @@ export const useDeleteHardTimeComponent = (aircraftId: number | null) => {
       toast.success('Componente eliminado');
     },
     onError: () => toast.error('No se pudo eliminar el componente'),
-  });
-};
-
-export const useImportHardTimeStructure = (aircraftId: number | null) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: HardTimeImportStructureRequest) => {
-      const importedPartIds: number[] = [];
-
-      for (const component of data.components) {
-        const componentResponse = await aircraftComponentSlotStore({
-          body: {
-            aircraft_id: data.aircraft_id,
-            category_code: data.category_code,
-            part_number: component.part_number,
-            description: component.description,
-            position: component.position,
-            ata_chapter: component.ata_chapter,
-          },
-          throwOnError: true,
-        }).then((res) => res.data);
-
-        const partId = componentResponse.data.id;
-        importedPartIds.push(partId);
-
-        for (const interval of component.intervals) {
-          await hardTimeIntervalStore({
-            path: { partId },
-            body: interval,
-            throwOnError: true,
-          });
-        }
-      }
-
-      return {
-        imported_parts: importedPartIds.length,
-        imported_intervals: data.components.reduce((total, component) => total + component.intervals.length, 0),
-      };
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({
-        queryKey: aircraftComponentSlotIndexQueryKey({ query: { aircraft_id: aircraftId! } }),
-      });
-      toast.success('Importación completada', {
-        description: `${result.imported_parts} componentes y ${result.imported_intervals} intervalos creados.`,
-      });
-    },
-    onError: () =>
-      toast.error('No se pudo completar la importación', {
-        description: 'Se importan sólo posiciones e intervalos. El histórico de cumplimiento sigue fuera de esta fase.',
-      }),
   });
 };
 

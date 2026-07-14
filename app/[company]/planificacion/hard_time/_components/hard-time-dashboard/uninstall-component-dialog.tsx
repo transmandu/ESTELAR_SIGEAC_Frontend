@@ -29,8 +29,7 @@ export function UninstallComponentDialog({ open, onOpenChange, component, aircra
   const uninstallComponent = useUninstallHardTimeComponent(component?.id ?? 0, aircraft?.id ?? null);
   const { data: conditions, isLoading: isLoadingConditions } = useGetConditions();
 
-  const installedArticleId = (component?.installed_part as unknown as { article_id?: number | null } | undefined)
-    ?.article_id;
+  const installedArticleId = component?.installed_part?.article_id;
   const needsCondition = !installedArticleId;
 
   const [form, setForm] = useState<UninstallFormState>({

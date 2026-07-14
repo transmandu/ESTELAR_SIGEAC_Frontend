@@ -3,6 +3,14 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGetHardTimeComponentDetail } from '@/hooks/planificacion/hard_time/useGetHardTimeComponentDetail';
@@ -21,7 +29,9 @@ import {
   PackageMinus,
   PackagePlus,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react';
+import { useDeleteHardTimeComponent, useToggleHardTimeInterval } from '@/actions/planificacion/hard_time/actions';
 import { useState } from 'react';
 import { HardTimeIntervalResource } from '@api/types';
 import { HardTimeIntervalCard } from './hard-time-interval-card';
@@ -38,6 +48,7 @@ interface HardTimeDetailViewProps {
   onInstall?: () => void;
   onUninstall?: () => void;
   onCreateInterval?: () => void;
+  onEditInterval?: (interval: HardTimeIntervalResource) => void;
   onRegisterCompliance?: () => void;
 }
 
@@ -122,6 +133,7 @@ export function HardTimeDetailView({
   onInstall,
   onUninstall,
   onCreateInterval,
+  onEditInterval,
   onRegisterCompliance,
 }: HardTimeDetailViewProps) {
   const {
@@ -133,6 +145,19 @@ export function HardTimeDetailView({
   } = useGetHardTimeComponentDetail(componentId);
 
   const [historyInterval, setHistoryInterval] = useState<HardTimeIntervalResource | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const deleteComponent = useDeleteHardTimeComponent(component?.aircraft_id ?? null);
+  const toggleInterval = useToggleHardTimeInterval(componentId, component?.aircraft_id ?? null);
+
+  const handleToggleInterval = (interval: HardTimeIntervalResource) => {
+    toggleInterval.mutate({ path: { id: interval.id } });
+  };
+
+  const handleDelete = async () => {
+    await deleteComponent.mutateAsync({ path: { id: componentId } });
+    setIsDeleteConfirmOpen(false);
+    onBack();
+  };
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -187,7 +212,10 @@ export function HardTimeDetailView({
   const StatusIcon = cfg.icon;
   const intervals = component.installed_part?.intervals ?? [];
   const activeIntervals = intervals.filter((interval) => interval.is_active);
+  const inactiveIntervals = intervals.filter((interval) => !interval.is_active);
   const installation = component.active_installation;
+  const isSlotEmpty =
+    !installation && !component.pending_installation_request && (component.installations ?? []).length === 0;
   const componentTitle = component.batch?.name || component.description || 'Sin nombre';
   const enrichedIntervals =
     installation != null && aircraftFlightHours != null && aircraftFlightCycles != null
@@ -352,6 +380,22 @@ export function HardTimeDetailView({
                       <span className="text-[11px] text-muted-foreground">Actualizar último cumplimiento</span>
                     </span>
                   </Button>
+
+                  {isSlotEmpty && (
+                    <Button
+                      variant="ghost"
+                      className="h-11 justify-start gap-3 rounded-md border border-transparent px-3 hover:border-destructive/40 hover:bg-destructive/5"
+                      onClick={() => setIsDeleteConfirmOpen(true)}
+                    >
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-background">
+                        <Trash2 className="size-4 text-destructive" />
+                      </span>
+                      <span className="flex flex-col items-start leading-none">
+                        <span className="text-sm font-medium text-destructive">Eliminar posición</span>
+                        <span className="text-[11px] text-muted-foreground">Sin historial ni parte montada</span>
+                      </span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -408,14 +452,77 @@ export function HardTimeDetailView({
                       averageDailyFH={averageDailyFH}
                       averageDailyFC={averageDailyFC}
                       onViewHistory={() => setHistoryInterval(interval)}
+                      onEdit={onEditInterval ? () => onEditInterval(interval) : undefined}
+                      onToggle={() => handleToggleInterval(interval)}
+                      isToggling={toggleInterval.isPending}
                     />
                   ))}
+                </div>
+              )}
+
+              {inactiveIntervals.length > 0 && (
+                <div className="mt-4 space-y-2 border-t border-border/40 pt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Intervalos inactivos
+                  </p>
+                  <div className="space-y-1.5">
+                    {inactiveIntervals.map((interval) => (
+                      <div
+                        key={interval.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2"
+                      >
+                        <p className="text-sm text-muted-foreground">{interval.task_description}</p>
+                        <div className="flex items-center gap-0.5">
+                          {onEditInterval && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                              onClick={() => onEditInterval(interval)}
+                            >
+                              Editar
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                            onClick={() => handleToggleInterval(interval)}
+                            disabled={toggleInterval.isPending}
+                          >
+                            Activar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar posición</DialogTitle>
+            <DialogDescription>
+              Se eliminará la posición <span className="font-mono font-medium">{component.position}</span> (
+              {componentTitle}). Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleteComponent.isPending}>
+              {deleteComponent.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ComplianceHistoryDialog
         open={historyInterval !== null}

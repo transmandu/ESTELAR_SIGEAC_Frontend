@@ -761,7 +761,7 @@ export const aircraftComponentSlotStoreMutation = (options?: Partial<Options<Air
 };
 
 /**
- * Destroy with relation checks. If related installations or intervals exist, return explanatory message
+ * Destroy with relation checks. If installation history or pending requests exist, return explanatory message
  */
 export const aircraftComponentSlotDestroyMutation = (options?: Partial<Options<AircraftComponentSlotDestroyData>>): UseMutationOptions<AircraftComponentSlotDestroyResponse, AxiosError<AircraftComponentSlotDestroyError>, Options<AircraftComponentSlotDestroyData>> => {
     const mutationOptions: UseMutationOptions<AircraftComponentSlotDestroyResponse, AxiosError<AircraftComponentSlotDestroyError>, Options<AircraftComponentSlotDestroyData>> = {
@@ -4970,6 +4970,56 @@ export const hardTimeIntervalIndexOptions = (options: Options<HardTimeIntervalIn
     queryKey: hardTimeIntervalIndexQueryKey(options)
 });
 
+export const hardTimeIntervalCompliancesQueryKey = (options: Options<HardTimeIntervalCompliancesData>) => createQueryKey('hardTimeIntervalCompliances', options);
+
+/**
+ * List paginated compliances for an interval.
+ * GET /hard-time-intervals/{id}/compliances
+ */
+export const hardTimeIntervalCompliancesOptions = (options: Options<HardTimeIntervalCompliancesData>) => queryOptions<HardTimeIntervalCompliancesResponse, AxiosError<HardTimeIntervalCompliancesError>, HardTimeIntervalCompliancesResponse, ReturnType<typeof hardTimeIntervalCompliancesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await hardTimeIntervalCompliances({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: hardTimeIntervalCompliancesQueryKey(options)
+});
+
+export const hardTimeIntervalCompliancesInfiniteQueryKey = (options: Options<HardTimeIntervalCompliancesData>): QueryKey<Options<HardTimeIntervalCompliancesData>> => createQueryKey('hardTimeIntervalCompliances', options, true);
+
+/**
+ * List paginated compliances for an interval.
+ * GET /hard-time-intervals/{id}/compliances
+ */
+export const hardTimeIntervalCompliancesInfiniteOptions = (options: Options<HardTimeIntervalCompliancesData>) => {
+    const opts = infiniteQueryOptions<HardTimeIntervalCompliancesResponse, AxiosError<HardTimeIntervalCompliancesError>, InfiniteData<HardTimeIntervalCompliancesResponse>, QueryKey<Options<HardTimeIntervalCompliancesData>>, number | Pick<QueryKey<Options<HardTimeIntervalCompliancesData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<HardTimeIntervalCompliancesData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    page: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await hardTimeIntervalCompliances({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: hardTimeIntervalCompliancesInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
+};
+
 /**
  * Create a new interval for a component.
  * POST /hard-time-components/{id}/intervals
@@ -5022,56 +5072,6 @@ export const hardTimeIntervalToggleMutation = (options?: Partial<Options<HardTim
         }
     };
     return mutationOptions;
-};
-
-export const hardTimeIntervalCompliancesQueryKey = (options: Options<HardTimeIntervalCompliancesData>) => createQueryKey('hardTimeIntervalCompliances', options);
-
-/**
- * List paginated compliances for an interval.
- * GET /hard-time-intervals/{id}/compliances
- */
-export const hardTimeIntervalCompliancesOptions = (options: Options<HardTimeIntervalCompliancesData>) => queryOptions<HardTimeIntervalCompliancesResponse, AxiosError<HardTimeIntervalCompliancesError>, HardTimeIntervalCompliancesResponse, ReturnType<typeof hardTimeIntervalCompliancesQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await hardTimeIntervalCompliances({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: hardTimeIntervalCompliancesQueryKey(options)
-});
-
-export const hardTimeIntervalCompliancesInfiniteQueryKey = (options: Options<HardTimeIntervalCompliancesData>): QueryKey<Options<HardTimeIntervalCompliancesData>> => createQueryKey('hardTimeIntervalCompliances', options, true);
-
-/**
- * List paginated compliances for an interval.
- * GET /hard-time-intervals/{id}/compliances
- */
-export const hardTimeIntervalCompliancesInfiniteOptions = (options: Options<HardTimeIntervalCompliancesData>) => {
-    const opts = infiniteQueryOptions<HardTimeIntervalCompliancesResponse, AxiosError<HardTimeIntervalCompliancesError>, InfiniteData<HardTimeIntervalCompliancesResponse>, QueryKey<Options<HardTimeIntervalCompliancesData>>, number | Pick<QueryKey<Options<HardTimeIntervalCompliancesData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
-    // @ts-ignore
-    {
-        queryFn: async ({ pageParam, queryKey, signal }) => {
-            // @ts-ignore
-            const page: Pick<QueryKey<Options<HardTimeIntervalCompliancesData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
-                query: {
-                    page: pageParam
-                }
-            };
-            const params = createInfiniteParams(queryKey, page);
-            const { data } = await hardTimeIntervalCompliances({
-                ...options,
-                ...params,
-                signal,
-                throwOnError: true
-            });
-            return data;
-        },
-        queryKey: hardTimeIntervalCompliancesInfiniteQueryKey(options)
-    });
-    return opts as Omit<typeof opts, 'initialData'>;
 };
 
 export const hardTimeTraceabilityIndexQueryKey = (options?: Options<HardTimeTraceabilityIndexData>) => createQueryKey('hardTimeTraceabilityIndex', options);

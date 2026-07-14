@@ -4,7 +4,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AircraftResource, HardTimeIntervalResource, StoreComplianceRequest, WorkOrderResource } from '@api/types';
+import { workOrdersIndexOptions } from '@api/queries';
+import { AircraftResource, HardTimeIntervalResource, StoreComplianceRequest } from '@api/types';
+import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, CalendarClock, ClipboardCheck, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ComplianceFormState } from './types';
@@ -16,7 +18,7 @@ type ComplianceDialogProps = {
   componentId: number | null;
   aircraft: AircraftResource | null;
   intervals: HardTimeIntervalResource[];
-  workOrders: WorkOrderResource[];
+  defaultIntervalId?: number | null;
 };
 
 export function ComplianceDialog({
@@ -25,9 +27,30 @@ export function ComplianceDialog({
   componentId,
   aircraft,
   intervals,
-  workOrders,
+  defaultIntervalId,
 }: ComplianceDialogProps) {
   const registerCompliance = useRegisterHardTimeCompliance(componentId ?? 0, aircraft?.id ?? null);
+
+  const [workOrderSearch, setWorkOrderSearch] = useState('');
+  const [debouncedWorkOrderSearch, setDebouncedWorkOrderSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedWorkOrderSearch(workOrderSearch), 300);
+    return () => clearTimeout(timer);
+  }, [workOrderSearch]);
+
+  const { data: workOrdersResponse, isLoading: isWorkOrdersLoading } = useQuery({
+    ...workOrdersIndexOptions({
+      query: {
+        per_page: 25,
+        aircraft_id: aircraft?.id ?? undefined,
+        search: debouncedWorkOrderSearch.trim() || undefined,
+      },
+    }),
+    enabled: open,
+  });
+
+  const workOrders = workOrdersResponse?.data ?? [];
   const [form, setForm] = useState<ComplianceFormState>({
     hard_time_interval_id: '',
     work_order_id: '',
@@ -40,15 +63,18 @@ export function ComplianceDialog({
   useEffect(() => {
     if (open) {
       setForm({
-        hard_time_interval_id: intervals.find((interval) => interval.is_active)?.id?.toString() ?? '',
+        hard_time_interval_id:
+          (defaultIntervalId ?? intervals.find((interval) => interval.is_active)?.id)?.toString() ?? '',
         work_order_id: '',
         compliance_date: todayDate(),
         aircraft_hours_at_compliance: String(aircraft?.flight_hours ?? 0),
         aircraft_cycles_at_compliance: String(aircraft?.flight_cycles ?? 0),
         remarks: '',
       });
+      setWorkOrderSearch('');
+      setDebouncedWorkOrderSearch('');
     }
-  }, [aircraft, intervals, open]);
+  }, [aircraft, intervals, defaultIntervalId, open]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -119,14 +145,23 @@ export function ComplianceDialog({
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Orden de trabajo</label>
+                  <Input
+                    value={workOrderSearch}
+                    onChange={(event) => setWorkOrderSearch(event.target.value)}
+                    placeholder="Buscar por número de OT…"
+                  />
                   <Select
                     value={form.work_order_id}
                     onValueChange={(value) => setForm((current) => ({ ...current, work_order_id: value }))}
+                    disabled={isWorkOrdersLoading}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona OT" />
+                      <SelectValue placeholder={isWorkOrdersLoading ? 'Cargando…' : 'Selecciona OT'} />
                     </SelectTrigger>
                     <SelectContent>
+                      {workOrders.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">Sin resultados para esta aeronave</div>
+                      )}
                       {workOrders.map((workOrder) => (
                         <SelectItem key={workOrder.id} value={String(workOrder.id)}>
                           {workOrder.order_number}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { addDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarClock, FileText, History } from 'lucide-react';
+import { CalendarClock, FileText, History, Pencil, Power } from 'lucide-react';
 import { HardTimeInstallationResource, HardTimeIntervalResource } from '@api/types';
 import { AlertBadge, computeIntervalMetrics, LEVEL_CONFIG, METRIC_ICONS, METRIC_LABELS, METRIC_UNITS } from './hard-time-shared';
 
@@ -18,6 +18,9 @@ interface HardTimeIntervalCardProps {
   averageDailyFH?: number | null;
   averageDailyFC?: number | null;
   onViewHistory?: () => void;
+  onEdit?: () => void;
+  onToggle?: () => void;
+  isToggling?: boolean;
 }
 
 export function HardTimeIntervalCard({
@@ -28,6 +31,9 @@ export function HardTimeIntervalCard({
   averageDailyFH,
   averageDailyFC,
   onViewHistory,
+  onEdit,
+  onToggle,
+  isToggling,
 }: HardTimeIntervalCardProps) {
   const enriched = useMemo(() => {
     if (!installation || aircraftFlightHours == null || aircraftFlightCycles == null) return null;
@@ -142,17 +148,42 @@ export function HardTimeIntervalCard({
                 </p>
               )}
             </div>
-            {onViewHistory && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={onViewHistory}
-              >
-                <History className="size-3" />
-                Historial
-              </Button>
-            )}
+            <div className="flex items-center gap-0.5">
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={onEdit}
+                >
+                  <Pencil className="size-3" />
+                  Editar
+                </Button>
+              )}
+              {onToggle && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={onToggle}
+                  disabled={isToggling}
+                >
+                  <Power className="size-3" />
+                  {interval.is_active ? 'Desactivar' : 'Activar'}
+                </Button>
+              )}
+              {onViewHistory && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={onViewHistory}
+                >
+                  <History className="size-3" />
+                  Historial
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
