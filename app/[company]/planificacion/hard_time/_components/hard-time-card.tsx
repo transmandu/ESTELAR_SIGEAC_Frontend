@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -8,21 +7,11 @@ import { cn } from '@/lib/utils';
 import { HardTimeAlertLevel, HardTimeIntervalWithMetrics } from '@/types';
 import { AircraftComponentSlotResource } from '@api/types';
 import Link from 'next/link';
-import {
-  CircleOff,
-  ClockArrowUp,
-  GripHorizontal,
-  ListPlus,
-  MapPinned,
-  PackageMinus,
-  PackagePlus,
-  Unplug,
-} from 'lucide-react';
+import { ClockArrowUp, ListPlus, MapPinned, PackageMinus, PackagePlus, ScanLine } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   AlertBadge,
   computeIntervalMetrics,
-  LEVEL_CONFIG,
   METRIC_ICONS,
   METRIC_LABELS,
   METRIC_UNITS,
@@ -44,65 +33,51 @@ interface HardTimeCardProps {
   isCancellingRequest?: boolean;
 }
 
-// ── Connector strip: visual "plug" interface between slot and part ──────────
+// ── Independent slot-state styling ───────────────────────────────────────────
+// Deliberately separate from LEVEL_CONFIG (hard-time-shared.tsx): the slot card
+// reads as a physical bay readout, not an alert panel, so it keeps its own
+// minimal accent language — a top rail + a compact mono status tag.
 
-function ConnectorInterface({ active, status }: { active: boolean; status?: HardTimeAlertLevel }) {
-  const dotColor = !active
-    ? 'bg-sky-400/60'
-    : status === 'OVERDUE'
-      ? 'bg-red-500'
-      : status === 'WARNING'
-        ? 'bg-amber-500'
-        : 'bg-emerald-500';
+const SLOT_STATE_STYLE: Record<HardTimeAlertLevel, { rail: string; bar: string }> = {
+  OVERDUE: { rail: 'bg-rose-500', bar: 'bg-rose-500' },
+  WARNING: { rail: 'bg-amber-500', bar: 'bg-amber-500' },
+  OK: { rail: 'bg-teal-500', bar: 'bg-teal-500' },
+};
+
+const VACANT_RAIL = 'bg-slate-300 dark:bg-slate-700';
+
+// ── Bay label: the fixed receptacle identity, read left→right like a manifest row ──
+
+function BayLabel({
+  position,
+  ataChapter,
+  rightSlot,
+}: {
+  position: string;
+  ataChapter?: string;
+  rightSlot: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-1.5 px-4 py-2">
-      <div className="h-px flex-1 bg-border/60" />
-      <div className="flex items-center gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className={cn('h-2 w-2 rounded-full', dotColor)} />
-        ))}
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <MapPinned className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+        <span className="truncate font-mono text-sm font-bold tracking-tight text-foreground">{position}</span>
+        {ataChapter && (
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground/60">·ATA {ataChapter}</span>
+        )}
       </div>
-      <div className="h-px flex-1 bg-border/60" />
+      {rightSlot}
     </div>
   );
 }
 
-// ── Slot header: the fixed receptacle identity ──────────────────────────────
+// ── Stretched link: a real <a> so ctrl/cmd/middle-click "open in new tab" work,
+// laid under the card content instead of wrapping it — nested <button> inside <a>
+// is invalid HTML and made click routing unreliable, so buttons live as siblings
+// stacked above this overlay instead of descendants of it. ────────────────────
 
-function SlotIdentity({
-  position,
-  ataChapter,
-  isEmpty,
-}: {
-  position: string;
-  ataChapter?: string;
-  isEmpty: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 px-5 pt-4">
-      <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border',
-          isEmpty
-            ? 'border-sky-500/20 bg-sky-500/10'
-            : 'border-border/60 bg-muted/30',
-        )}
-      >
-        <MapPinned className={cn('h-4 w-4', isEmpty ? 'text-sky-600' : 'text-muted-foreground')} />
-      </div>
-      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-baseline gap-2">
-          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Posición</p>
-          <span className="truncate font-mono text-base font-semibold text-foreground">{position}</span>
-        </div>
-        {ataChapter && (
-          <span className="shrink-0 whitespace-nowrap rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-            ATA {ataChapter}
-          </span>
-        )}
-      </div>
-    </div>
-  );
+function CardLinkOverlay({ href, label }: { href: string; label: string }) {
+  return <Link href={href} aria-label={label} className="absolute inset-0 z-0 rounded-lg" />;
 }
 
 export function HardTimeCard({
@@ -139,8 +114,7 @@ export function HardTimeCard({
     );
   }, [intervals]);
 
-  const cfg = LEVEL_CONFIG[componentStatus];
-  const LevelIcon = cfg.icon;
+  const state = SLOT_STATE_STYLE[componentStatus];
 
   const statusCounts: Record<HardTimeAlertLevel, number> = { OK: 0, WARNING: 0, OVERDUE: 0 };
   intervals.forEach((i) => {
@@ -160,195 +134,154 @@ export function HardTimeCard({
 
   if (isVacant) {
     return (
-      <Link
-        href={href}
-        className="group block cursor-pointer overflow-hidden rounded-lg border border-dashed border-sky-400/40 bg-sky-500/[0.03] transition-colors hover:border-sky-500/60 hover:bg-sky-500/[0.06]"
-      >
-        {/* Slot identity */}
-        <SlotIdentity
-          position={component.position}
-          ataChapter={category?.ata_chapter}
-          isEmpty
-        />
+      <div className="group relative block overflow-hidden rounded-lg border border-border/60 bg-background transition-colors hover:border-border">
+        <CardLinkOverlay href={href} label={`Ver posición ${component.position}, vacía`} />
 
-        {/* Connector interface — inactive */}
-        <ConnectorInterface active={false} />
+        <div className="pointer-events-none relative">
+          <div className={cn('h-[3px] w-full', VACANT_RAIL)} />
 
-        {/* Empty bay */}
-        <div className="space-y-3.5 px-5 pb-4">
-          {pendingRequest ? (
-            <PendingInstallationRequest
-              request={pendingRequest}
-              position={component.position}
-              componentName={component.batch?.name || component.description || undefined}
-              onCancel={onCancelRequest}
-              isCancelling={isCancellingRequest}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-sky-400/30 bg-background/50 px-4 py-6">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10">
-                <Unplug className="h-4 w-4 text-sky-500/70" />
+          <BayLabel
+            position={component.position}
+            ataChapter={category?.ata_chapter}
+            rightSlot={
+              <span className="shrink-0 font-mono text-[10px] font-semibold tracking-wide text-muted-foreground/60">
+                VACÍO
+              </span>
+            }
+          />
+
+          <div className="border-t border-dashed border-border/60 px-4 py-4">
+            {pendingRequest ? (
+              <div className="pointer-events-auto">
+                <PendingInstallationRequest
+                  request={pendingRequest}
+                  position={component.position}
+                  componentName={component.batch?.name || component.description || undefined}
+                  onCancel={onCancelRequest}
+                  isCancelling={isCancellingRequest}
+                />
               </div>
-              <div className="space-y-0.5 text-center">
-                <p className="text-sm font-medium text-foreground">{componentTitle}</p>
-                {component.part_number && (
-                  <p className="font-mono text-[11px] text-muted-foreground">P/N esperado: {component.part_number}</p>
-                )}
-              </div>
-              <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                Posición vacía — monta un componente<br />para activar el control hard time.
-              </p>
-              {!pendingRequest && (
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-dashed border-border/70 text-muted-foreground/50">
+                  <ScanLine className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground/80">{componentTitle}</p>
+                  {component.part_number ? (
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">
+                      P/N esperado: {component.part_number}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">Sin componente instalado</p>
+                  )}
+                </div>
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1.5 border-sky-500/30 px-3.5 text-xs text-sky-700 transition-transform hover:bg-sky-500/10 active:scale-[0.97] dark:text-sky-300"
+                  className="pointer-events-auto relative z-10 h-8 shrink-0 gap-1.5 px-3 text-xs transition-transform active:scale-[0.97]"
                   onClick={(e) => {
                     e.stopPropagation();
                     onInstall?.();
                   }}
                 >
                   <PackagePlus className="h-3.5 w-3.5" />
-                  Montar componente
+                  Montar
                 </Button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
-          {/* Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="outline" className="h-6 border-border/60 px-2.5 text-[11px] font-normal">
-              {rawIntervalsCount} intervalo{rawIntervalsCount !== 1 && 's'}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="h-6 gap-1 border-sky-500/20 bg-sky-500/10 px-2 text-[11px] text-sky-700 dark:text-sky-300"
-            >
-              <CircleOff className="h-3 w-3" />
-              Vacío
-            </Badge>
+          <div className="flex items-center justify-between border-t border-border/40 px-4 py-2">
+            <span className="font-mono text-[10px] text-muted-foreground/60">
+              {rawIntervalsCount} intervalo{rawIntervalsCount !== 1 && 's'} configurado{rawIntervalsCount !== 1 && 's'}
+            </span>
           </div>
         </div>
-      </Link>
+      </div>
     );
   }
 
   // ── OCCUPIED SLOT ───────────────────────────────────────────────────────────
 
   return (
-    <Link
-      href={href}
-      className={cn(
-        'group block cursor-pointer overflow-hidden rounded-lg transition-colors hover:brightness-[0.99] dark:hover:brightness-110',
-        cfg.cardBorder,
-        cfg.cardBg,
-      )}
-    >
-      {/* Slot identity */}
-      <SlotIdentity
-        position={component.position}
-        ataChapter={category?.ata_chapter}
-        isEmpty={false}
-      />
+    <div className="group relative block overflow-hidden rounded-lg border border-border/60 bg-background transition-colors hover:border-border">
+      <CardLinkOverlay href={href} label={`Ver posición ${component.position}, ${componentTitle}`} />
 
-      {/* Connector interface — active, status-colored */}
-      <ConnectorInterface active status={componentStatus} />
+      <div className="pointer-events-none relative">
+        <div className={cn('h-[3px] w-full', state.rail)} />
 
-      {/* Installed part — the pluggable module */}
-      <div className="mx-4 mb-4 overflow-hidden rounded-md border border-border/60 bg-background/70">
-        {/* Part header */}
-        <div className="flex items-start justify-between gap-3 border-b border-border/40 px-4 py-3.5">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className={cn(
-                'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
-                cfg.iconBg,
+        <BayLabel
+          position={component.position}
+          ataChapter={category?.ata_chapter}
+          rightSlot={
+            <span className="flex shrink-0 items-center gap-1.5">
+              {pendingRequest && (
+                <ClockArrowUp className="h-3.5 w-3.5 text-amber-500" aria-label="Solicitud pendiente" />
               )}
-            >
-              <LevelIcon className={cn('h-4 w-4', cfg.iconText)} />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <p className="truncate text-sm font-semibold leading-tight text-foreground">
-                {componentTitle}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                <span className="font-mono">
-                  {installation ? 'P/N' : 'P/N esperado'}: {installation?.part_number ?? component.part_number ?? '—'}
-                </span>
-                {installation && (
-                  <>
-                    <span className="text-border">·</span>
-                    <span className="font-mono">S/N: {installation.serial_number}</span>
-                  </>
-                )}
-              </div>
-              {component.batch?.name &&
-                component.description &&
-                component.batch.name !== component.description && (
-                  <p className="truncate text-[11px] text-muted-foreground/70">{component.description}</p>
-                )}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {pendingRequest && (
-              <Badge
-                variant="outline"
-                className="h-6 gap-1 border-amber-500/20 bg-amber-500/10 px-2 text-[11px] text-amber-600 dark:text-amber-400"
-              >
-                <ClockArrowUp className="h-3 w-3" />
-                Pendiente
-              </Badge>
+              <AlertBadge status={componentStatus} size="small" />
+            </span>
+          }
+        />
+
+        {/* Installed part */}
+        <div className="border-t border-border/60 px-4 py-3">
+          <p className="truncate text-sm font-semibold leading-tight text-foreground">{componentTitle}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
+            <span className="font-mono">
+              {installation ? 'P/N' : 'P/N esperado'}: {installation?.part_number ?? component.part_number ?? '—'}
+            </span>
+            {installation && (
+              <>
+                <span className="text-border">/</span>
+                <span className="font-mono">S/N: {installation.serial_number}</span>
+              </>
             )}
-            <AlertBadge status={componentStatus} size="small" />
           </div>
+          {component.batch?.name && component.description && component.batch.name !== component.description && (
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">{component.description}</p>
+          )}
         </div>
 
         {/* Intervals section */}
-        <div className="px-4 py-3.5">
+        <div className="border-t border-border/40 px-4 py-3">
           {intervals.length > 0 ? (
-            <ScrollArea className={shouldScrollMetrics ? 'h-[190px] pr-3' : undefined}>
+            <ScrollArea className={cn('pointer-events-auto relative z-10', shouldScrollMetrics && 'h-[190px] pr-3')}>
               <ScrollBar orientation="horizontal" />
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {intervals.map((interval, intervalIdx) => (
-                  <div
-                    key={`${interval.id ?? interval.task_description}-${intervalIdx}`}
-                    className="space-y-2.5 border-b border-border/30 pb-3 last:border-b-0 last:pb-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <GripHorizontal className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-                      <p className="break-words text-xs font-semibold leading-snug text-foreground">
-                        {interval.task_description}
-                      </p>
-                    </div>
-                    <div className="space-y-2 pl-[22px]">
+                  <div key={`${interval.id ?? interval.task_description}-${intervalIdx}`} className="space-y-2">
+                    <p className="truncate text-[11px] font-medium leading-snug text-foreground/80">
+                      {interval.task_description}
+                    </p>
+                    <div className="space-y-1.5">
                       {interval.metrics.map((metric, metricIdx) => {
-                        const mCfg = LEVEL_CONFIG[metric.status];
+                        const mStyle = SLOT_STATE_STYLE[metric.status];
                         const Icon = METRIC_ICONS[metric.type];
                         return (
                           <div
                             key={`${interval.task_description}-${metric.type}-${metricIdx}`}
-                            className="space-y-1.5"
+                            className="grid grid-cols-[16px_44px_1fr_auto] items-center gap-2"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                                <Icon className="h-3.5 w-3.5 shrink-0" />
-                                {METRIC_LABELS[metric.type]}
-                              </p>
-                              {metric.remaining <= 0 ? (
-                                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                                  VENCIDO
-                                </span>
-                              ) : (
-                                <span className="font-mono text-[11px] font-medium text-muted-foreground">
-                                  {metric.remaining.toFixed(1)} {METRIC_UNITS[metric.type]} rest.
-                                </span>
-                              )}
-                            </div>
+                            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                            <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                              {METRIC_LABELS[metric.type]}
+                            </span>
                             <Progress
                               value={Math.min(metric.percentage, 100)}
-                              className="h-2"
-                              indicatorClassName={mCfg.progressIndicator}
+                              className="h-1.5 bg-muted"
+                              indicatorClassName={mStyle.bar}
                             />
+                            {metric.remaining <= 0 ? (
+                              <span className="whitespace-nowrap font-mono text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                                VENCIDO
+                              </span>
+                            ) : (
+                              <span className="whitespace-nowrap font-mono text-[10px] text-muted-foreground">
+                                {metric.remaining.toFixed(1)} {METRIC_UNITS[metric.type]}
+                              </span>
+                            )}
                           </div>
                         );
                       })}
@@ -360,7 +293,7 @@ export function HardTimeCard({
           ) : canCreateInterval ? (
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border/70 bg-background/50 py-3 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+              className="pointer-events-auto relative z-10 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border/70 py-3 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
                 onCreateInterval?.();
@@ -373,34 +306,36 @@ export function HardTimeCard({
         </div>
 
         {/* Actions footer */}
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border/40 px-4 py-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-            <Badge variant="outline" className="h-6 shrink-0 border-border/60 px-2.5 text-[11px] font-normal">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border/40 px-4 py-2.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] text-muted-foreground/70">
+            <span>
               {intervals.length} intervalo{intervals.length !== 1 && 's'}
-            </Badge>
+            </span>
             {intervals.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-medium">
+              <>
                 {statusCounts.OVERDUE > 0 && (
-                  <span className="text-red-600 dark:text-red-400">
-                    {statusCounts.OVERDUE} vencido{statusCounts.OVERDUE !== 1 && 's'}
+                  <span className="text-rose-600 dark:text-rose-400">
+                    · {statusCounts.OVERDUE} vencido{statusCounts.OVERDUE !== 1 && 's'}
                   </span>
                 )}
                 {statusCounts.WARNING > 0 && (
                   <span className="text-amber-600 dark:text-amber-400">
-                    {statusCounts.WARNING} próximo{statusCounts.WARNING !== 1 && 's'}
+                    · {statusCounts.WARNING} próximo{statusCounts.WARNING !== 1 && 's'}
                   </span>
                 )}
                 {statusCounts.OK > 0 && (
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    {statusCounts.OK} OK
-                  </span>
+                  <span className="text-teal-600 dark:text-teal-400">· {statusCounts.OK} OK</span>
                 )}
-              </div>
+              </>
             )}
           </div>
-          <div className="ml-auto flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="pointer-events-auto relative z-10 ml-auto flex shrink-0 items-center gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             {canCreateInterval && (
               <Button
+                type="button"
                 size="sm"
                 variant="ghost"
                 className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground transition-transform hover:text-foreground active:scale-[0.97]"
@@ -414,9 +349,10 @@ export function HardTimeCard({
               </Button>
             )}
             <Button
+              type="button"
               size="sm"
               variant="outline"
-              className="h-8 gap-1.5 border-amber-500/30 px-3 text-xs text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-[0.97] dark:text-amber-400"
+              className="h-8 gap-1.5 px-3 text-xs transition-transform active:scale-[0.97]"
               onClick={(e) => {
                 e.stopPropagation();
                 onUninstall?.();
@@ -428,6 +364,6 @@ export function HardTimeCard({
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

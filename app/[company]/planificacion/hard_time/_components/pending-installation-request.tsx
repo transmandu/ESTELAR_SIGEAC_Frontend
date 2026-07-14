@@ -57,6 +57,7 @@ export function PendingInstallationRequest({ request, position, componentName, o
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 className="h-7 gap-1 border-red-500/30 px-2.5 text-[11px] text-red-600 hover:bg-red-500/10 dark:text-red-400"
