@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useDebounce } from '@/hooks/helpers/useDebounce';
 import { cn } from '@/lib/utils';
 import { useCompanyStore } from '@/stores/CompanyStore';
@@ -27,8 +28,8 @@ import { z } from 'zod';
 
 const formSchema = z.object({
   category_code: z.string().min(1, 'Seleccione un capítulo ATA'),
-  batch_id: z.number({ required_error: 'Seleccione un componente' }),
-  part_number: z.string().min(1, 'Ingrese el part number'),
+  batch_id: z.number({ required_error: 'Seleccione un componente' }).min(1, 'Seleccione un componente'),
+  part_number: z.string().optional(),
   description: z.string().optional(),
   position: z.string().min(1, 'Ingrese la ubicación'),
 });
@@ -121,7 +122,7 @@ function CreateComponentForm(props: CreateComponentDialogProps) {
           aircraft_id: aircraftId,
           category_code: values.category_code,
           batch_id: values.batch_id,
-          part_number: values.part_number.trim(),
+          part_number: values.part_number?.trim() || null,
           description: values.description?.trim() ?? '',
           position: values.position.trim(),
         },
@@ -158,41 +159,26 @@ function CreateComponentForm(props: CreateComponentDialogProps) {
           )}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="part_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Part Number</FormLabel>
-                <FormControl>
-                  <Input {...field} required />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="position"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Ubicación</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="ENG-1-FP" required />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="position"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Posición</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="ENG-1-FP" required />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
           name="batch_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descripción</FormLabel>
+              <FormLabel>Componente (catálogo)</FormLabel>
               <FormControl>
                 <Popover open={isBatchPopoverOpen} onOpenChange={setIsBatchPopoverOpen}>
                   <PopoverTrigger asChild>
@@ -271,12 +257,26 @@ function CreateComponentForm(props: CreateComponentDialogProps) {
 
         <FormField
           control={form.control}
+          name="part_number"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>P/N esperado (opcional)</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Ej: 3289562-6 — P/N que normalmente va en esta posición" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Observaciones</FormLabel>
+              <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Observaciones del componente" />
+                <Textarea {...field} rows={3} placeholder="Descripción adicional de la posición" />
               </FormControl>
               <FormMessage />
             </FormItem>

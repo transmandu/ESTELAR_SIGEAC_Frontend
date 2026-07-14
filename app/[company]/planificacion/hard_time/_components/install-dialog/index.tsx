@@ -17,6 +17,7 @@ interface InstallDialogProps {
   componentId: number | null;
   aircraft: AircraftResource | null;
   defaultPartNumber?: string;
+  slotBatchId?: number | null;
   slotLabel?: string;
   componentLabel?: string;
 }
@@ -35,7 +36,7 @@ export function InstallDialog(props: InstallDialogProps) {
 }
 
 function Content(props: InstallDialogProps) {
-  const { componentId, aircraft, defaultPartNumber, slotLabel, componentLabel, onOpenChange } = props;
+  const { componentId, aircraft, defaultPartNumber, slotBatchId, slotLabel, componentLabel, onOpenChange } = props;
   const [mode, setMode] = useState<InstallMode>('manual');
 
   const formProps = {
@@ -105,7 +106,7 @@ function Content(props: InstallDialogProps) {
           value="warehouse"
           className="empty:hidden contents outline-none focus-visible:outline-none"
         >
-          <WarehouseInstallForm {...formProps} />
+          <WarehouseInstallForm {...formProps} slotBatchId={slotBatchId} />
         </TabsPrimitive.Content>
       </TabsPrimitive.Root>
     </>

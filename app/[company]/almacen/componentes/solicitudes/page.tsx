@@ -188,7 +188,7 @@ function RequestCard({
           <div className="flex items-center gap-1.5">
             <Wrench className="size-3 text-muted-foreground" />
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Slot de destino en aeronave
+              Posición de destino en aeronave
             </p>
           </div>
           <div className="mt-2 space-y-1.5">

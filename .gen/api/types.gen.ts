@@ -10623,6 +10623,8 @@ export type DispatchOrderShowItemsDispatchPaginatedData = {
         location: number;
         category: string;
         search?: string | null;
+        batch_id?: number | null;
+        part_number?: string | null;
         page?: number | null;
         per_page?: number | null;
         include_aircraft_part?: boolean | null;

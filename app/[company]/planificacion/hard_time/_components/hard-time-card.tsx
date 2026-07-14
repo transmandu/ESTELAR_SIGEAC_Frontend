@@ -91,7 +91,7 @@ function SlotIdentity({
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
         <div className="flex min-w-0 items-baseline gap-2">
-          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Slot</p>
+          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Posición</p>
           <span className="truncate font-mono text-base font-semibold text-foreground">{position}</span>
         </div>
         {ataChapter && (
@@ -188,8 +188,14 @@ export function HardTimeCard({
               <div className="flex h-9 w-9 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10">
                 <Unplug className="h-4 w-4 text-sky-500/70" />
               </div>
+              <div className="space-y-0.5 text-center">
+                <p className="text-sm font-medium text-foreground">{componentTitle}</p>
+                {component.part_number && (
+                  <p className="font-mono text-[11px] text-muted-foreground">P/N esperado: {component.part_number}</p>
+                )}
+              </div>
               <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                Slot vacío — monta un componente<br />para activar el control hard time.
+                Posición vacía — monta un componente<br />para activar el control hard time.
               </p>
               {!pendingRequest && (
                 <Button
@@ -265,7 +271,9 @@ export function HardTimeCard({
                 {componentTitle}
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                <span className="font-mono">P/N: {installation?.part_number ?? component.part_number}</span>
+                <span className="font-mono">
+                  {installation ? 'P/N' : 'P/N esperado'}: {installation?.part_number ?? component.part_number ?? '—'}
+                </span>
                 {installation && (
                   <>
                     <span className="text-border">·</span>

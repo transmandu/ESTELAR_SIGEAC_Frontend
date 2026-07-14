@@ -101,13 +101,13 @@ export function ManualInstallForm({
             <div className="ml-auto flex items-center gap-4">
               {slotLabel ? (
                 <div className="flex items-center gap-1.5">
-                  <FieldLabel>Slot</FieldLabel>
+                  <FieldLabel>Posición</FieldLabel>
                   <span className="font-mono text-xs font-medium text-foreground">{slotLabel}</span>
                 </div>
               ) : null}
               {componentLabel ? (
                 <div className="flex items-center gap-1.5">
-                  <FieldLabel>Posición</FieldLabel>
+                  <FieldLabel>Componente</FieldLabel>
                   <span className="text-xs font-medium text-foreground">{componentLabel}</span>
                 </div>
               ) : null}

@@ -281,7 +281,12 @@ export function HardTimeDetailView({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <DetailStat label="Parte" value={installation?.part_number ?? component.part_number ?? '—'} icon={PackageCheck} mono />
+                <DetailStat
+                  label={installation ? 'P/N instalado' : 'P/N esperado'}
+                  value={installation?.part_number ?? component.part_number ?? '—'}
+                  icon={PackageCheck}
+                  mono
+                />
                 <DetailStat label="Serial" value={installation?.serial_number ?? '—'} icon={Layers3} mono />
                 <DetailStat label="Instalado" value={formatDate(installation?.installed_at)} icon={CalendarClock} />
                 <DetailStat label="FH instalación" value={formatNumber(installation?.aircraft_hours_at_install, 2)} icon={Gauge} mono />

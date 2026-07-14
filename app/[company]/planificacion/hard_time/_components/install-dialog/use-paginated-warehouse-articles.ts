@@ -6,12 +6,16 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 interface UsePaginatedWarehouseArticlesParams {
   search?: string;
+  batchId?: number | null;
+  partNumber?: string | null;
   page?: number;
   perPage?: number;
 }
 
 export function usePaginatedWarehouseArticles({
   search,
+  batchId,
+  partNumber,
   page = 1,
   perPage = 25,
 }: UsePaginatedWarehouseArticlesParams = {}) {
@@ -23,6 +27,8 @@ export function usePaginatedWarehouseArticles({
         location: Number(selectedStation),
         category: 'COMPONENTE',
         search: search || undefined,
+        batch_id: batchId ?? undefined,
+        part_number: partNumber || undefined,
         page,
         per_page: perPage,
       },

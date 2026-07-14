@@ -274,6 +274,7 @@ export function HardTimeDashboard() {
         componentId={installTargetComponent?.id ?? null}
         aircraft={selectedAircraft}
         defaultPartNumber={installingComponentPartNumber}
+        slotBatchId={installTargetComponent?.batch?.id ?? null}
         slotLabel={installTargetComponent?.position}
         componentLabel={installTargetComponent?.batch?.name ?? installTargetComponent?.description ?? undefined}
       />

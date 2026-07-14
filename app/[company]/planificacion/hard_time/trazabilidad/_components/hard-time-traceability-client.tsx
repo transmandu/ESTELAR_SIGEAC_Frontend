@@ -80,7 +80,7 @@ export function HardTimeTraceabilityClient() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Aeronave</TableHead>
-                  <TableHead>Slot / parte</TableHead>
+                  <TableHead>Posición / parte</TableHead>
                   <TableHead>Serial / PN</TableHead>
                   <TableHead>Montado</TableHead>
                   <TableHead>Desmontado</TableHead>

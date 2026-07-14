@@ -4,6 +4,7 @@ import { useCreateInstallRequest } from '@/actions/planificacion/hard_time/actio
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { AircraftResource } from '@api/types';
 import { AlertCircle, CalendarClock, CheckCircle2, Loader2, PenLine, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -30,6 +31,7 @@ interface WarehouseInstallFormProps {
   componentId: number | null;
   aircraft: AircraftResource | null;
   defaultPartNumber?: string;
+  slotBatchId?: number | null;
   slotLabel?: string;
   componentLabel?: string;
   onSuccess: () => void;
@@ -39,6 +41,7 @@ export function WarehouseInstallForm({
   componentId,
   aircraft,
   defaultPartNumber,
+  slotBatchId,
   slotLabel,
   componentLabel,
   onSuccess,
@@ -48,6 +51,11 @@ export function WarehouseInstallForm({
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  // Default filter: restrict inventory to the slot's expected batch/PN. Optional — the
+  // user can turn it off to pick any compatible article.
+  const canFilterBySlot = Boolean(slotBatchId || defaultPartNumber);
+  const [filterBySlot, setFilterBySlot] = useState(canFilterBySlot);
 
   // Debounce search
   useEffect(() => {
@@ -61,6 +69,8 @@ export function WarehouseInstallForm({
     isError: isWarehouseError,
   } = usePaginatedWarehouseArticles({
     search: debouncedSearch || undefined,
+    batchId: filterBySlot ? slotBatchId : undefined,
+    partNumber: filterBySlot && !slotBatchId ? defaultPartNumber : undefined,
     page,
     perPage: 25,
   });
@@ -107,10 +117,10 @@ export function WarehouseInstallForm({
     setPage(1);
   }, [defaultPartNumber]);
 
-  // ---- reset page when search changes ----
+  // ---- reset page when search or slot filter changes ----
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterBySlot]);
 
   // ---- warehouse article selection ----
   const handleWarehouseDetailFetch = async (row: WarehouseRow) => {
@@ -169,13 +179,13 @@ export function WarehouseInstallForm({
             <div className="ml-auto flex items-center gap-4">
               {slotLabel ? (
                 <div className="flex items-center gap-1.5">
-                  <FieldLabel>Slot</FieldLabel>
+                  <FieldLabel>Posición</FieldLabel>
                   <span className="font-mono text-xs font-medium text-foreground">{slotLabel}</span>
                 </div>
               ) : null}
               {componentLabel ? (
                 <div className="flex items-center gap-1.5">
-                  <FieldLabel>Posición</FieldLabel>
+                  <FieldLabel>Componente</FieldLabel>
                   <span className="text-xs font-medium text-foreground">{componentLabel}</span>
                 </div>
               ) : null}
@@ -189,6 +199,21 @@ export function WarehouseInstallForm({
               </div>
             </div>
           </div>
+
+          {canFilterBySlot && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-4 py-2.5">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-foreground">Filtrar por componente de la posición</p>
+                <p className="text-xs text-muted-foreground">
+                  {slotBatchId
+                    ? `Mostrando solo artículos del componente esperado${componentLabel ? ` (${componentLabel})` : ''}.`
+                    : `Mostrando solo artículos con P/N esperado ${defaultPartNumber}.`}{' '}
+                  Desactívalo para ver todo el inventario.
+                </p>
+              </div>
+              <Switch checked={filterBySlot} onCheckedChange={setFilterBySlot} />
+            </div>
+          )}
 
           <WarehouseInventoryTable
             rows={warehouseRows}
