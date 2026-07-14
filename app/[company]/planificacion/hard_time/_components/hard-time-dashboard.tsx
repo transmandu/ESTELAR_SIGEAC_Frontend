@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useMemo, useState } from 'react';
 import { AlertCircle, Plus, SearchCheck, Wrench } from 'lucide-react';
 
 import { ContentLayout } from '@/components/layout/ContentLayout';
@@ -27,7 +28,28 @@ import { AircraftComponentSlotResource, HardTimeIntervalResource } from '@api/ty
 
 export function HardTimeDashboard() {
   const { selectedCompany } = useCompanyStore();
-  const [selectedAircraftId, setSelectedAircraftId] = useState<number | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [selectedAircraftId, setSelectedAircraftId] = useState<number | null>(() => {
+    const param = Number(searchParams.get('aircraft'));
+    return Number.isInteger(param) && param > 0 ? param : null;
+  });
+  const initialCategoryCode = searchParams.get('ata');
+
+  const updateSearchParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
   const [isCreateComponentOpen, setIsCreateComponentOpen] = useState(false);
   const [createComponentDefaultCategory, setCreateComponentDefaultCategory] = useState<string | null>(null);
   const [installTargetComponent, setInstallTargetComponent] = useState<AircraftComponentSlotResource | null>(null);
@@ -63,6 +85,7 @@ export function HardTimeDashboard() {
 
   const handleSelectAircraft = (id: number) => {
     setSelectedAircraftId(id);
+    updateSearchParams({ aircraft: String(id) });
   };
 
   const openInstall = (component: AircraftComponentSlotResource) => {
@@ -172,6 +195,8 @@ export function HardTimeDashboard() {
                   aircraftFlightHours={selectedAircraft?.flight_hours ?? null}
                   aircraftFlightCycles={selectedAircraft?.flight_cycles ?? null}
                   componentHref={(component) => `/${selectedCompany?.slug}/planificacion/hard_time/slots/${component.id}`}
+                  initialCategoryCode={initialCategoryCode}
+                  onCategoryChange={(code) => updateSearchParams({ ata: code })}
                   onInstallComponent={openInstall}
                   onUninstallComponent={openUninstall}
                   onCreateIntervalForComponent={openCreateInterval}

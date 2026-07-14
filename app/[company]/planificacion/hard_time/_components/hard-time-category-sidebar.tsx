@@ -16,6 +16,8 @@ interface HardTimeCategorySidebarProps {
   aircraftFlightHours?: number | null;
   aircraftFlightCycles?: number | null;
   componentHref: (component: AircraftComponentSlotResource) => string;
+  initialCategoryCode?: string | null;
+  onCategoryChange?: (code: string) => void;
   onInstallComponent: (component: AircraftComponentSlotResource) => void;
   onUninstallComponent: (component: AircraftComponentSlotResource) => void;
   onCreateIntervalForComponent: (component: AircraftComponentSlotResource) => void;
@@ -63,6 +65,8 @@ export function HardTimeCategorySidebar({
   aircraftFlightHours,
   aircraftFlightCycles,
   componentHref,
+  initialCategoryCode,
+  onCategoryChange,
   onInstallComponent,
   onUninstallComponent,
   onCreateIntervalForComponent,
@@ -94,7 +98,16 @@ export function HardTimeCategorySidebar({
       });
   }, [categories, categoryGroups, aircraftFlightHours, aircraftFlightCycles]);
 
-  const [selectedCategoryCode, setSelectedCategoryCode] = useState<string>(entries[0]?.category.code ?? '');
+  const [selectedCategoryCode, setSelectedCategoryCode] = useState<string>(
+    initialCategoryCode && entries.some((entry) => entry.category.code === initialCategoryCode)
+      ? initialCategoryCode
+      : (entries[0]?.category.code ?? ''),
+  );
+
+  const selectCategory = (code: string) => {
+    setSelectedCategoryCode(code);
+    onCategoryChange?.(code);
+  };
 
   useEffect(() => {
     if (!entries.length) return;
@@ -200,7 +213,7 @@ export function HardTimeCategorySidebar({
                           ? 'border-primary/20 bg-primary text-white'
                           : 'border-transparent hover:border-border/60 hover:bg-muted/20'
                       }`}
-                      onClick={() => setSelectedCategoryCode(entry.category.code)}
+                      onClick={() => selectCategory(entry.category.code)}
                       aria-pressed={isActive}
                     >
                       <div className="min-w-0 flex-1">

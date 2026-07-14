@@ -60,7 +60,7 @@ export function HardTimeSlotDetail({ slotId }: { slotId: number }) {
     return bestId;
   }, [component, aircraft]);
 
-  const goBack = () => router.push(`/${selectedCompany?.slug}/planificacion/hard_time`);
+  const goBack = () => router.back();
 
   const openCreateInterval = () => {
     if (!component?.installed_part_id) return;
