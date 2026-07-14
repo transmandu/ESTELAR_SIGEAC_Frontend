@@ -13,7 +13,6 @@
     "diagnose:flight-detail": "node --experimental-strip-types scripts/diagnose-flight-detail-lookup.ts"
   },
   "dependencies": {
-    "@hey-api/client-axios": "^0.9.1",
     "@hookform/resolvers": "^3.10.0",
     "@laravel/echo-react": "^2.3.7",
     "@react-pdf/renderer": "^4.5.1",
