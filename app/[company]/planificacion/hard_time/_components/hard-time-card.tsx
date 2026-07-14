@@ -7,6 +7,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { HardTimeAlertLevel, HardTimeIntervalWithMetrics } from '@/types';
 import { AircraftComponentSlotResource } from '@api/types';
+import Link from 'next/link';
 import {
   CircleOff,
   ClockArrowUp,
@@ -31,7 +32,7 @@ import { PendingInstallationRequest } from './pending-installation-request';
 
 interface HardTimeCardProps {
   component: AircraftComponentSlotResource;
-  onSelect: () => void;
+  href: string;
   averageDailyFH?: number | null;
   averageDailyFC?: number | null;
   aircraftFlightHours?: number | null;
@@ -106,7 +107,7 @@ function SlotIdentity({
 
 export function HardTimeCard({
   component,
-  onSelect,
+  href,
   aircraftFlightHours,
   aircraftFlightCycles,
   onInstall,
@@ -159,9 +160,9 @@ export function HardTimeCard({
 
   if (isVacant) {
     return (
-      <div
-        className="group cursor-pointer overflow-hidden rounded-lg border border-dashed border-sky-400/40 bg-sky-500/[0.03] transition-colors hover:border-sky-500/60 hover:bg-sky-500/[0.06]"
-        onClick={onSelect}
+      <Link
+        href={href}
+        className="group block cursor-pointer overflow-hidden rounded-lg border border-dashed border-sky-400/40 bg-sky-500/[0.03] transition-colors hover:border-sky-500/60 hover:bg-sky-500/[0.06]"
       >
         {/* Slot identity */}
         <SlotIdentity
@@ -228,20 +229,20 @@ export function HardTimeCard({
             </Badge>
           </div>
         </div>
-      </div>
+      </Link>
     );
   }
 
   // ── OCCUPIED SLOT ───────────────────────────────────────────────────────────
 
   return (
-    <div
+    <Link
+      href={href}
       className={cn(
-        'group cursor-pointer overflow-hidden rounded-lg transition-colors hover:brightness-[0.99] dark:hover:brightness-110',
+        'group block cursor-pointer overflow-hidden rounded-lg transition-colors hover:brightness-[0.99] dark:hover:brightness-110',
         cfg.cardBorder,
         cfg.cardBg,
       )}
-      onClick={onSelect}
     >
       {/* Slot identity */}
       <SlotIdentity
@@ -427,6 +428,6 @@ export function HardTimeCard({
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

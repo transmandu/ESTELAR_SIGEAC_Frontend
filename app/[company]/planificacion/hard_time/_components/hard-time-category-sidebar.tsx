@@ -7,6 +7,7 @@ import { AlertTriangle, Boxes, PackageOpen, PlusCircle, Search, ShieldCheck, Tri
 import { useEffect, useMemo, useState } from 'react';
 import { HardTimeCard } from './hard-time-card';
 import { computeComponentStatus } from './hard-time-shared';
+import { cn } from '@/lib/utils';
 
 interface HardTimeCategorySidebarProps {
   categories: HardTimeCategoryResource[];
@@ -14,7 +15,7 @@ interface HardTimeCategorySidebarProps {
   averages: { average_daily_flight_hours?: number | null; average_daily_flight_cycles?: number | null } | null;
   aircraftFlightHours?: number | null;
   aircraftFlightCycles?: number | null;
-  onSelectComponent: (component: AircraftComponentSlotResource) => void;
+  componentHref: (component: AircraftComponentSlotResource) => string;
   onInstallComponent: (component: AircraftComponentSlotResource) => void;
   onUninstallComponent: (component: AircraftComponentSlotResource) => void;
   onCreateIntervalForComponent: (component: AircraftComponentSlotResource) => void;
@@ -61,7 +62,7 @@ export function HardTimeCategorySidebar({
   averages,
   aircraftFlightHours,
   aircraftFlightCycles,
-  onSelectComponent,
+  componentHref,
   onInstallComponent,
   onUninstallComponent,
   onCreateIntervalForComponent,
@@ -194,37 +195,43 @@ export function HardTimeCategorySidebar({
                   <li key={entry.category.code}>
                     <button
                       type="button"
-                      className={`flex w-full items-start justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                      className={`group flex w-full items-start justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                         isActive
-                          ? 'border-sky-500/40 bg-sky-500/[0.08]'
+                          ? 'border-primary/20 bg-primary text-white'
                           : 'border-transparent hover:border-border/60 hover:bg-muted/20'
                       }`}
                       onClick={() => setSelectedCategoryCode(entry.category.code)}
+                      aria-pressed={isActive}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-sm font-semibold text-foreground">{entry.category.code}</span>
+                          <span className="leading-none font-mono text-sm font-semibold text-foreground group-aria-pressed:text-white">
+                            {entry.category.code}
+                          </span>
                           {entry.stats.overdue > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400 group-aria-pressed:bg-white rounded-full px-1">
                               <TriangleAlert className="h-2.5 w-2.5" />
                               {entry.stats.overdue}
                             </span>
                           )}
                           {entry.stats.warning > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 group-aria-pressed:bg-white rounded-full px-1">
                               <AlertTriangle className="h-2.5 w-2.5" />
                               {entry.stats.warning}
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">{entry.category.name}</p>
+                        <p className="mt-1 truncate text-xs text-muted-foreground group-aria-pressed:text-white">
+                          {entry.category.name}
+                        </p>
                       </div>
                       {entry.stats.total !== 0 && (
                         <Badge
                           variant="outline"
-                          className={`shrink-0 self-start font-mono text-[10px] ${
-                            isEmpty ? 'border-dashed border-border/50 text-muted-foreground' : 'border-border/70'
-                          }`}
+                          className={cn(
+                            'shrink-0 self-start font-mono text-[10px] group-aria-pressed:bg-white',
+                            isEmpty ? 'border-dashed border-border/50 text-muted-foreground' : 'border-border/70',
+                          )}
                         >
                           {entry.stats.total}
                         </Badge>
@@ -321,7 +328,7 @@ export function HardTimeCategorySidebar({
                   <HardTimeCard
                     key={component.id}
                     component={component}
-                    onSelect={() => onSelectComponent(component)}
+                    href={componentHref(component)}
                     averageDailyFH={averageDailyFH}
                     averageDailyFC={averageDailyFC}
                     aircraftFlightHours={aircraftFlightHours}

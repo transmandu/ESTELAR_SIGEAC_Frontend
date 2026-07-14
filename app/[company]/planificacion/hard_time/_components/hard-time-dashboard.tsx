@@ -1,37 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertCircle, Plus, SearchCheck, Wrench } from 'lucide-react';
 
 import { ContentLayout } from '@/components/layout/ContentLayout';
+import SectionHeader from '@/components/layout/SectionHeader';
 import LoadingPage from '@/components/misc/LoadingPage';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { HardTimeCardSkeletonGrid } from './hard-time-card-skeleton';
 import { useGetMaintenanceAircrafts } from '@/hooks/planificacion/useGetMaintenanceAircrafts';
 import { useGetHardTimeCategories } from '@/hooks/planificacion/hard_time/useGetHardTimeCategories';
-import { useGetHardTimeComponentDetail } from '@/hooks/planificacion/hard_time/useGetHardTimeComponentDetail';
 import { useGetHardTimeComponents } from '@/hooks/planificacion/hard_time/useGetHardTimeComponents';
 import { useCompanyStore } from '@/stores/CompanyStore';
 import { AircraftAverageSummaryCard } from '../../control_mantenimiento/_components/aircraft-average-summary-card';
 import { AircraftSelector } from '../../control_mantenimiento/_components/aircraft-selector';
 import { HardTimeCategorySidebar } from './hard-time-category-sidebar';
-import { HardTimeDetailView } from './hard-time-detail-view';
 import { SectionEmpty } from './hard-time-dashboard/section-empty';
 import { CreateComponentDialog } from './hard-time-dashboard/create-component-dialog';
 import { UninstallComponentDialog } from './hard-time-dashboard/uninstall-component-dialog';
 import { IntervalDialog } from './hard-time-dashboard/interval-dialog';
-import { ComplianceDialog } from './hard-time-dashboard/compliance-dialog';
 import { InstallDialog } from './install-dialog';
 import { useCancelInstallationRequest } from '@/actions/planificacion/hard_time/actions';
-import { computeIntervalMetrics, STATUS_ORDER } from './hard-time-shared';
 import { AircraftComponentSlotResource, HardTimeIntervalResource } from '@api/types';
 
 export function HardTimeDashboard() {
   const { selectedCompany } = useCompanyStore();
   const [selectedAircraftId, setSelectedAircraftId] = useState<number | null>(null);
-  const [selectedComponent, setSelectedComponent] = useState<AircraftComponentSlotResource | null>(null);
   const [isCreateComponentOpen, setIsCreateComponentOpen] = useState(false);
   const [createComponentDefaultCategory, setCreateComponentDefaultCategory] = useState<string | null>(null);
   const [installTargetComponent, setInstallTargetComponent] = useState<AircraftComponentSlotResource | null>(null);
@@ -39,7 +35,6 @@ export function HardTimeDashboard() {
   const [isIntervalDialogOpen, setIsIntervalDialogOpen] = useState(false);
   const [editingInterval, setEditingInterval] = useState<HardTimeIntervalResource | null>(null);
   const [intervalTargetComponent, setIntervalTargetComponent] = useState<AircraftComponentSlotResource | null>(null);
-  const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
 
   const { data: aircraft = [], isLoading: isAircraftLoading } = useGetMaintenanceAircrafts(selectedCompany?.slug);
   const { data: categories = [] } = useGetHardTimeCategories();
@@ -48,7 +43,6 @@ export function HardTimeDashboard() {
     isLoading: isComponentsLoading,
     isError: isComponentsError,
   } = useGetHardTimeComponents(selectedAircraftId);
-  const { data: selectedComponentDetail } = useGetHardTimeComponentDetail(selectedComponent?.id);
 
   const selectedAircraft = useMemo(
     () => aircraft.find((item) => item.id === selectedAircraftId) ?? null,
@@ -62,53 +56,13 @@ export function HardTimeDashboard() {
     return Array.from(map.values());
   }, [componentsList]);
 
-  useEffect(() => {
-    if (!selectedComponent) return;
-    if (componentsList.some((component) => component.id === selectedComponent.id)) return;
-    setSelectedComponent(null);
-  }, [componentsList, selectedComponent]);
-
   const cancelRequestMutation = useCancelInstallationRequest();
   const averages = selectedAircraft?.last_average_metric ?? null;
 
-  // Preselect the interval closest to (or past) its limit when registering a compliance
-  const complianceDefaultIntervalId = useMemo(() => {
-    const installation = selectedComponentDetail?.active_installation;
-    const intervals = (selectedComponentDetail?.installed_part?.intervals ?? []).filter((i) => i.is_active);
-    if (!installation || intervals.length === 0) return null;
-    const fh = selectedAircraft?.flight_hours;
-    const fc = selectedAircraft?.flight_cycles;
-    if (fh == null || fc == null) return intervals[0].id;
-
-    let bestId = intervals[0].id;
-    let bestRank = -1;
-    for (const interval of intervals) {
-      const enriched = computeIntervalMetrics(interval, installation, fh, fc);
-      const rank = STATUS_ORDER[enriched.status];
-      if (rank > bestRank) {
-        bestRank = rank;
-        bestId = interval.id;
-      }
-    }
-    return bestId;
-  }, [selectedComponentDetail, selectedAircraft]);
-
-  const installingComponentPartNumber =
-    selectedComponentDetail?.part_number ??
-    componentsList.find((component) => component.id === installTargetComponent?.id)?.part_number ??
-    '';
+  const installingComponentPartNumber = installTargetComponent?.part_number ?? '';
 
   const handleSelectAircraft = (id: number) => {
-    startTransition(() => {
-      setSelectedAircraftId(id);
-      setSelectedComponent(null);
-    });
-  };
-
-  const handleSelectComponent = (component: AircraftComponentSlotResource) => {
-    startTransition(() => {
-      setSelectedComponent(component);
-    });
+    setSelectedAircraftId(id);
   };
 
   const openInstall = (component: AircraftComponentSlotResource) => {
@@ -116,7 +70,6 @@ export function HardTimeDashboard() {
   };
 
   const openUninstall = (component: AircraftComponentSlotResource) => {
-    setSelectedComponent(component);
     setUninstallingComponent(component);
   };
 
@@ -130,20 +83,13 @@ export function HardTimeDashboard() {
     setIsIntervalDialogOpen(true);
   };
 
-  const openEditInterval = (interval: HardTimeIntervalResource) => {
-    if (!selectedComponent) return;
-    setIntervalTargetComponent(selectedComponent);
-    setEditingInterval(interval);
-    setIsIntervalDialogOpen(true);
-  };
-
   const handleCancelRequest = (component: AircraftComponentSlotResource) => {
     const requestId = component.pending_installation_request?.id;
     if (!requestId) return;
-    cancelRequestMutation.mutate(
-      { path: { id: requestId }, body: { resolution_reason: 'Cancelado por planificación' } },
-      { onSuccess: () => setSelectedComponent(null) },
-    );
+    cancelRequestMutation.mutate({
+      path: { id: requestId },
+      body: { resolution_reason: 'Cancelado por planificación' },
+    });
   };
 
   const openCreateComponent = (categoryCode: string | null = null) => {
@@ -157,32 +103,30 @@ export function HardTimeDashboard() {
     <ContentLayout title="Control Hard Time">
       <main className="max-w-[2080px] p-4 lg:p-6">
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
+          <SectionHeader
+            size="xl"
+            title="Control Hard Time"
+            subtitle="Seguimiento de componentes limitados por horas, ciclos y calendario."
+            titleIcon={
               <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
                 <Wrench className="size-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">Control Hard Time</h1>
-                <p className="text-sm text-muted-foreground">
-                  Seguimiento de componentes limitados por horas, ciclos y calendario.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button asChild variant="outline" className="gap-2">
-                <Link href={`/${selectedCompany?.slug}/planificacion/hard_time/trazabilidad`}>
-                  <SearchCheck className="size-4" />
-                  Trazabilidad
-                </Link>
-              </Button>
-              <Button className="gap-2" onClick={() => openCreateComponent(null)} disabled={!selectedAircraftId}>
-                <Plus className="size-4" />
-                Nueva posición
-              </Button>
-            </div>
-          </div>
+            }
+            actions={
+              <>
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href={`/${selectedCompany?.slug}/planificacion/hard_time/trazabilidad`}>
+                    <SearchCheck className="size-4" />
+                    Trazabilidad
+                  </Link>
+                </Button>
+                <Button className="gap-2" onClick={() => openCreateComponent(null)} disabled={!selectedAircraftId}>
+                  <Plus className="size-4" />
+                  Nueva posición
+                </Button>
+              </>
+            }
+          />
 
           <AircraftSelector
             aircraft={aircraft}
@@ -220,20 +164,6 @@ export function HardTimeDashboard() {
                   title="Sin capítulos ATA disponibles"
                   description="No hay capítulos ATA configurados. Contacta al administrador."
                 />
-              ) : selectedComponent ? (
-                <HardTimeDetailView
-                  componentId={selectedComponent.id}
-                  averageDailyFH={averages?.average_daily_flight_hours ?? null}
-                  averageDailyFC={averages?.average_daily_flight_cycles ?? null}
-                  aircraftFlightHours={selectedAircraft?.flight_hours ?? null}
-                  aircraftFlightCycles={selectedAircraft?.flight_cycles ?? null}
-                  onBack={() => setSelectedComponent(null)}
-                  onInstall={() => openInstall(selectedComponent)}
-                  onUninstall={() => openUninstall(selectedComponent)}
-                  onCreateInterval={() => openCreateInterval(selectedComponent)}
-                  onEditInterval={openEditInterval}
-                  onRegisterCompliance={() => setIsComplianceDialogOpen(true)}
-                />
               ) : (
                 <HardTimeCategorySidebar
                   categories={categories}
@@ -241,7 +171,7 @@ export function HardTimeDashboard() {
                   averages={averages}
                   aircraftFlightHours={selectedAircraft?.flight_hours ?? null}
                   aircraftFlightCycles={selectedAircraft?.flight_cycles ?? null}
-                  onSelectComponent={handleSelectComponent}
+                  componentHref={(component) => `/${selectedCompany?.slug}/planificacion/hard_time/slots/${component.id}`}
                   onInstallComponent={openInstall}
                   onUninstallComponent={openUninstall}
                   onCreateIntervalForComponent={openCreateInterval}
@@ -297,19 +227,10 @@ export function HardTimeDashboard() {
             setIntervalTargetComponent(null);
           }
         }}
-        partId={intervalTargetComponent?.installed_part_id ?? selectedComponent?.installed_part_id ?? 0}
-        componentId={intervalTargetComponent?.id ?? selectedComponent?.id ?? null}
+        partId={intervalTargetComponent?.installed_part_id ?? 0}
+        componentId={intervalTargetComponent?.id ?? null}
         aircraftId={selectedAircraftId}
         interval={editingInterval}
-      />
-
-      <ComplianceDialog
-        open={isComplianceDialogOpen}
-        onOpenChange={setIsComplianceDialogOpen}
-        componentId={selectedComponent?.installed_part_id ?? null}
-        aircraft={selectedAircraft}
-        intervals={selectedComponentDetail?.installed_part?.intervals ?? []}
-        defaultIntervalId={complianceDefaultIntervalId}
       />
     </ContentLayout>
   );

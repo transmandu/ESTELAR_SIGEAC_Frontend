@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
@@ -17,11 +17,10 @@ import { useGetHardTimeComponentDetail } from '@/hooks/planificacion/hard_time/u
 import { formatDate, formatNumber } from '@/lib/helpers/format';
 import {
   AlertCircle,
-  ArrowLeft,
   CalendarClock,
+  CircleOff,
   ClipboardCheck,
   ClipboardPlus,
-  Component,
   Gauge,
   Layers3,
   Loader2,
@@ -30,8 +29,14 @@ import {
   PackagePlus,
   ShieldAlert,
   Trash2,
+  Unplug,
 } from 'lucide-react';
-import { useDeleteHardTimeComponent, useToggleHardTimeInterval } from '@/actions/planificacion/hard_time/actions';
+import {
+  useCancelInstallationRequest,
+  useDeleteHardTimeComponent,
+  useToggleHardTimeInterval,
+} from '@/actions/planificacion/hard_time/actions';
+import { PendingInstallationRequest } from './pending-installation-request';
 import { useState } from 'react';
 import { HardTimeIntervalResource } from '@api/types';
 import { HardTimeIntervalCard } from './hard-time-interval-card';
@@ -140,7 +145,6 @@ export function HardTimeDetailView({
     data: component,
     isLoading,
     isError,
-    isFetching,
     refetch,
   } = useGetHardTimeComponentDetail(componentId);
 
@@ -148,6 +152,16 @@ export function HardTimeDetailView({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const deleteComponent = useDeleteHardTimeComponent(component?.aircraft_id ?? null);
   const toggleInterval = useToggleHardTimeInterval(componentId, component?.aircraft_id ?? null);
+  const cancelRequestMutation = useCancelInstallationRequest();
+
+  const handleCancelRequest = () => {
+    const requestId = component?.pending_installation_request?.id;
+    if (!requestId) return;
+    cancelRequestMutation.mutate({
+      path: { id: requestId },
+      body: { resolution_reason: 'Cancelado por planificación' },
+    });
+  };
 
   const handleToggleInterval = (interval: HardTimeIntervalResource) => {
     toggleInterval.mutate({ path: { id: interval.id } });
@@ -166,10 +180,6 @@ export function HardTimeDetailView({
   if (isError) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" className="gap-2 px-0 text-muted-foreground hover:bg-transparent" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-          Volver a componentes
-        </Button>
         <Card className="border-border/60">
           <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3 py-10 text-center">
             <AlertCircle className="size-5 text-muted-foreground" />
@@ -189,10 +199,6 @@ export function HardTimeDetailView({
   if (!component) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" className="gap-2 px-0 text-muted-foreground hover:bg-transparent" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-          Volver a componentes
-        </Button>
         <Card className="border-border/60">
           <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3 py-10 text-center">
             <p className="text-sm font-semibold">No se encontró componente.</p>
@@ -214,6 +220,7 @@ export function HardTimeDetailView({
   const activeIntervals = intervals.filter((interval) => interval.is_active);
   const inactiveIntervals = intervals.filter((interval) => !interval.is_active);
   const installation = component.active_installation;
+  const pendingRequest = component.pending_installation_request;
   const isSlotEmpty =
     !installation && !component.pending_installation_request && (component.installations ?? []).length === 0;
   const componentTitle = component.batch?.name || component.description || 'Sin nombre';
@@ -228,53 +235,60 @@ export function HardTimeDetailView({
   const healthyCount = enrichedIntervals.filter((interval) => interval.status === 'OK').length;
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <Card className={`overflow-hidden border-border/60 ${cfg.cardBorder} ${cfg.cardBg}`}>
-        <div className="flex flex-col gap-3 border-b border-border/60 bg-background/60 px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <Button
-            variant="ghost"
-            className="h-8 w-fit gap-2 rounded-md border border-transparent px-2 text-muted-foreground hover:border-border/60 hover:bg-background"
-            onClick={onBack}
-          >
-            <ArrowLeft className="size-4" />
-            Volver a componentes
-          </Button>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Badge variant="outline" className="h-6 gap-1 rounded-md border-border/60 bg-background px-2 font-mono">
-              <Component className="size-3.5" />
-              {component.position}
-            </Badge>
-            {component.category?.ata_chapter && (
-              <Badge variant="outline" className="h-6 rounded-md border-border/60 bg-background px-2 font-mono">
-                ATA {component.category.ata_chapter}
-              </Badge>
-            )}
-            {isFetching && (
-              <span className="inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-background px-2">
-                <Loader2 className="size-3 animate-spin" />
-                Actualizando
-              </span>
-            )}
-          </div>
-        </div>
-
+      <Card
+        className={`overflow-hidden ${
+          installation
+            ? `border-border/60 ${cfg.cardBorder} ${cfg.cardBg}`
+            : 'border-dashed border-sky-400/40 bg-sky-500/[0.03]'
+        }`}
+      >
         <CardHeader className="gap-5 px-5 py-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${cfg.iconBg}`}>
-                  <StatusIcon className={`h-5 w-5 ${cfg.iconText}`} />
-                </div>
+                {installation ? (
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${cfg.iconBg}`}>
+                    <StatusIcon className={`h-5 w-5 ${cfg.iconText}`} />
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10">
+                    <Unplug className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xl font-semibold tracking-tight text-foreground">{componentTitle}</p>
-                    <AlertBadge status={status} size="medium" />
+                    {installation ? (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className="h-6 gap-1 border-emerald-500/20 bg-emerald-500/10 px-2 text-[11px] text-emerald-700 dark:text-emerald-400"
+                        >
+                          <PackageCheck className="h-3 w-3" />
+                          Montado
+                        </Badge>
+                        <AlertBadge status={status} size="medium" />
+                      </>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="h-6 gap-1 border-sky-500/20 bg-sky-500/10 px-2 text-[11px] text-sky-700 dark:text-sky-300"
+                      >
+                        <CircleOff className="h-3 w-3" />
+                        Vacío
+                      </Badge>
+                    )}
                   </div>
                   <div className="space-y-1">
                     {component.batch?.name && component.description && component.batch.name !== component.description && (
                       <p className="text-sm text-muted-foreground">{component.description}</p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      Vista técnica de componente hard time con foco en estado, trazabilidad y acción rápida.
+                      {installation
+                        ? `Componente montado el ${formatDate(installation.installed_at)} — S/N ${installation.serial_number}.`
+                        : pendingRequest
+                          ? 'Posición vacía con solicitud de montaje pendiente de aprobación por almacén.'
+                          : 'Posición vacía — monta un componente para activar el control hard time.'}
                     </p>
                   </div>
                 </div>
@@ -291,6 +305,16 @@ export function HardTimeDetailView({
                 <DetailStat label="Instalado" value={formatDate(installation?.installed_at)} icon={CalendarClock} />
                 <DetailStat label="FH instalación" value={formatNumber(installation?.aircraft_hours_at_install, 2)} icon={Gauge} mono />
               </div>
+
+              {pendingRequest && (
+                <PendingInstallationRequest
+                  request={pendingRequest}
+                  position={component.position}
+                  componentName={componentTitle}
+                  onCancel={handleCancelRequest}
+                  isCancelling={cancelRequestMutation.isPending}
+                />
+              )}
             </div>
 
             <div className="xl:max-w-[320px] xl:min-w-[320px]">
@@ -346,13 +370,16 @@ export function HardTimeDetailView({
                       variant="ghost"
                       className="h-11 justify-start gap-3 rounded-md border border-transparent px-3 hover:border-border/60 hover:bg-background"
                       onClick={onInstall}
+                      disabled={Boolean(pendingRequest)}
                     >
                       <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-background">
                         <PackagePlus className="size-4 text-muted-foreground" />
                       </span>
                       <span className="flex flex-col items-start leading-none">
                         <span className="text-sm font-medium text-foreground">Montar componente</span>
-                        <span className="text-[11px] text-muted-foreground">Manual o desde almacén</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {pendingRequest ? 'Solicitud pendiente en curso' : 'Manual o desde almacén'}
+                        </span>
                       </span>
                     </Button>
                   ) : (

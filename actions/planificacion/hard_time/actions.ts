@@ -18,7 +18,6 @@ import {
 } from '@api/sdk.gen';
 import {
   StoreComplianceRequest,
-  StoreIntervalRequest,
   UninstallComponentRequest,
   UpdateIntervalRequest,
 } from '@api/types';
@@ -226,6 +225,7 @@ export const useCancelInstallationRequest = () => {
       queryClient.invalidateQueries({
         queryKey: aircraftComponentSlotIndexQueryKey(),
       });
+      queryClient.invalidateQueries({ queryKey: aircraftComponentSlotShowQueryKey(undefined as any) });
       queryClient.invalidateQueries({ queryKey: hardTimeInstallationRequestIndexQueryKey() });
       toast.success('Solicitud cancelada', { description: 'La solicitud de montaje fue cancelada.' });
     },
