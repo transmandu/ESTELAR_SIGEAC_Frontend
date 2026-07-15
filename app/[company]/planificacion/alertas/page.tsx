@@ -284,7 +284,7 @@ function AlertQueueTable({ alerts }: { alerts: PlanificationAlertResource[] }) {
 
             return (
               <tr
-                key={`${alert.item_type}-${alert.item_identifier}-${alert.aircraft?.id}`}
+                key={`${alert.item_type}-${alert.id}-${alert.aircraft?.id}`}
                 className={cn(
                   'border-b border-border/50 transition-colors hover:bg-muted/40',
                   alert.status === 'OVERDUE' && 'bg-red-500/[0.04] dark:bg-red-950/20',
@@ -395,179 +395,185 @@ export default function PlanificationAlertsDashboardPage() {
   if (isAircraftLoading) return <LoadingPage />;
 
   return (
-    <ContentLayout>
-      <main className="max-w-[2080px] space-y-5 p-4 lg:p-6">
-        <SectionHeader
-          size="md"
-          title="Alertas de Planificación"
-          subtitle="Controles, hard time y directivas en orden de prioridad."
-          backHref={`/${selectedCompany?.slug}/planificacion`}
-          titleIcon={
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive/20">
-              <Siren className="h-5 w-5 text-destructive" />
-            </div>
-          }
-          actions={
+    <main className="container space-y-5 p-4 lg:p-6">
+      <SectionHeader
+        size="md"
+        title="Alertas de Planificación"
+        subtitle="Controles, hard time y directivas en orden de prioridad."
+        titleIcon={
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive/20">
+            <Siren className="h-5 w-5 text-destructive" />
+          </div>
+        }
+        actions={
+          <>
             <Badge variant="outline" className="border-primary/30 font-medium text-primary">
               {selectedAircraftLabel}
             </Badge>
-          }
-        />
-
-        {isAlertsLoading ? (
-          <SummarySkeleton />
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <SummaryTile
-              label={LEVEL_CONFIG.OVERDUE.label}
-              value={summary?.overdue ?? 0}
-              code={statusFilter}
-              active={statusFilter === 'OVERDUE'}
-              onClick={() => setStatusFilter((prev) => (prev === 'OVERDUE' ? 'all' : 'OVERDUE'))}
-              icon={LEVEL_CONFIG.OVERDUE.icon}
-              cardBg={LEVEL_CONFIG.OVERDUE.cardBg}
-              iconBg={LEVEL_CONFIG.OVERDUE.iconBg}
-              iconText={LEVEL_CONFIG.OVERDUE.iconText}
-            />
-            <SummaryTile
-              label={LEVEL_CONFIG.WARNING.label}
-              value={summary?.warning ?? 0}
-              code={statusFilter}
-              active={statusFilter === 'WARNING'}
-              onClick={() => setStatusFilter((prev) => (prev === 'WARNING' ? 'all' : 'WARNING'))}
-              icon={LEVEL_CONFIG.WARNING.icon}
-              cardBg={LEVEL_CONFIG.WARNING.cardBg}
-              iconBg={LEVEL_CONFIG.WARNING.iconBg}
-              iconText={LEVEL_CONFIG.WARNING.iconText}
-            />
-            <SummaryTile
-              label={LEVEL_CONFIG.OK.label}
-              value={summary?.ok ?? 0}
-              code={statusFilter}
-              active={statusFilter === 'OK'}
-              onClick={() => setStatusFilter((prev) => (prev === 'OK' ? 'all' : 'OK'))}
-              icon={LEVEL_CONFIG.OK.icon}
-              cardBg={LEVEL_CONFIG.OK.cardBg}
-              iconBg={LEVEL_CONFIG.OK.iconBg}
-              iconText={LEVEL_CONFIG.OK.iconText}
-            />
-            <SummaryTile
-              label={TOTAL_SUMMARY_CONFIG.label}
-              value={summary?.total ?? 0}
-              code={statusFilter}
-              active={statusFilter === 'all'}
-              onClick={() => setStatusFilter('all')}
-              icon={TOTAL_SUMMARY_CONFIG.icon}
-              cardBg={TOTAL_SUMMARY_CONFIG.cardBg}
-              iconBg={TOTAL_SUMMARY_CONFIG.iconBg}
-              iconText={TOTAL_SUMMARY_CONFIG.iconText}
-            />
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3 lg:flex-row lg:items-center">
-          <div className="flex flex-1 flex-wrap gap-2">
-            <Select
-              value={selectedAircraftId === 'all' ? 'all' : String(selectedAircraftId)}
-              onValueChange={(value) => setSelectedAircraftId(value === 'all' ? 'all' : Number(value))}
+            <Link
+              href={`/${selectedCompany?.slug}/planificacion/alertas/calendario`}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
             >
-              <SelectTrigger className="h-9 w-full sm:w-[220px]">
-                <Plane className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Aeronave" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toda la flota</SelectItem>
-                {aircraft.map((item) => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.acronym} · {item.serial}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Calendar className="h-4 w-4" />
+              Vista de calendario
+            </Link>
+          </>
+        }
+      />
 
-            <Select
-              value={itemTypeFilter}
-              onValueChange={(value) => setItemTypeFilter(value as 'all' | PlanificationAlertItemType)}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-[200px]">
-                <SelectValue placeholder="Tipo de ítem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="maintenance_control">Control de mantenimiento</SelectItem>
-                <SelectItem value="hard_time">Hard time</SelectItem>
-                <SelectItem value="directive">Directiva</SelectItem>
-              </SelectContent>
-            </Select>
+      {isAlertsLoading ? (
+        <SummarySkeleton />
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <SummaryTile
+            label={LEVEL_CONFIG.OVERDUE.label}
+            value={summary?.overdue ?? 0}
+            code={statusFilter}
+            active={statusFilter === 'OVERDUE'}
+            onClick={() => setStatusFilter((prev) => (prev === 'OVERDUE' ? 'all' : 'OVERDUE'))}
+            icon={LEVEL_CONFIG.OVERDUE.icon}
+            cardBg={LEVEL_CONFIG.OVERDUE.cardBg}
+            iconBg={LEVEL_CONFIG.OVERDUE.iconBg}
+            iconText={LEVEL_CONFIG.OVERDUE.iconText}
+          />
+          <SummaryTile
+            label={LEVEL_CONFIG.WARNING.label}
+            value={summary?.warning ?? 0}
+            code={statusFilter}
+            active={statusFilter === 'WARNING'}
+            onClick={() => setStatusFilter((prev) => (prev === 'WARNING' ? 'all' : 'WARNING'))}
+            icon={LEVEL_CONFIG.WARNING.icon}
+            cardBg={LEVEL_CONFIG.WARNING.cardBg}
+            iconBg={LEVEL_CONFIG.WARNING.iconBg}
+            iconText={LEVEL_CONFIG.WARNING.iconText}
+          />
+          <SummaryTile
+            label={LEVEL_CONFIG.OK.label}
+            value={summary?.ok ?? 0}
+            code={statusFilter}
+            active={statusFilter === 'OK'}
+            onClick={() => setStatusFilter((prev) => (prev === 'OK' ? 'all' : 'OK'))}
+            icon={LEVEL_CONFIG.OK.icon}
+            cardBg={LEVEL_CONFIG.OK.cardBg}
+            iconBg={LEVEL_CONFIG.OK.iconBg}
+            iconText={LEVEL_CONFIG.OK.iconText}
+          />
+          <SummaryTile
+            label={TOTAL_SUMMARY_CONFIG.label}
+            value={summary?.total ?? 0}
+            code={statusFilter}
+            active={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+            icon={TOTAL_SUMMARY_CONFIG.icon}
+            cardBg={TOTAL_SUMMARY_CONFIG.cardBg}
+            iconBg={TOTAL_SUMMARY_CONFIG.iconBg}
+            iconText={TOTAL_SUMMARY_CONFIG.iconText}
+          />
+        </div>
+      )}
 
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as 'all' | PlanificationAlertStatus)}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-[160px]">
-                <SelectValue placeholder="Severidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="OVERDUE">Vencido</SelectItem>
-                <SelectItem value="WARNING">Próximo</SelectItem>
-                <SelectItem value="OK">En tiempo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3 lg:flex-row lg:items-center">
+        <div className="flex flex-1 flex-wrap gap-2">
+          <Select
+            value={selectedAircraftId === 'all' ? 'all' : String(selectedAircraftId)}
+            onValueChange={(value) => setSelectedAircraftId(value === 'all' ? 'all' : Number(value))}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[220px]">
+              <Plane className="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue placeholder="Aeronave" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toda la flota</SelectItem>
+              {aircraft.map((item) => (
+                <SelectItem key={item.id} value={String(item.id)}>
+                  {item.acronym} · {item.serial}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="relative lg:w-80">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar identificador, descripción o aeronave"
-              className="h-9 pl-9"
-            />
-          </div>
+          <Select
+            value={itemTypeFilter}
+            onValueChange={(value) => setItemTypeFilter(value as 'all' | PlanificationAlertItemType)}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[200px]">
+              <SelectValue placeholder="Tipo de ítem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los tipos</SelectItem>
+              <SelectItem value="maintenance_control">Control de mantenimiento</SelectItem>
+              <SelectItem value="hard_time">Hard time</SelectItem>
+              <SelectItem value="directive">Directiva</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as 'all' | PlanificationAlertStatus)}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[160px]">
+              <SelectValue placeholder="Severidad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="OVERDUE">Vencido</SelectItem>
+              <SelectItem value="WARNING">Próximo</SelectItem>
+              <SelectItem value="OK">En tiempo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {isAlertsLoading ? (
-          <TableSkeleton />
-        ) : isError ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No se pudieron cargar las alertas</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error ? error.message : 'Ocurrió un error inesperado al consultar la cola unificada.'}
-            </AlertDescription>
-          </Alert>
-        ) : filteredRows.length === 0 ? (
-          <Card className="border-dashed border-border/70">
-            <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Siren className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">No hay alertas para los filtros actuales.</p>
-              <p className="max-w-lg text-sm text-muted-foreground">
-                {alertRows.length === 0
-                  ? 'Backend no devolvió ítems para la combinación seleccionada. El resumen superior se mantiene visible.'
-                  : 'La cola sí contiene ítems, pero ninguno coincide con la búsqueda de texto actual.'}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base">Cola priorizada</CardTitle>
-                  <CardDescription>Orden: severidad, fecha, restante, aeronave.</CardDescription>
-                </div>
-                <Badge variant="outline" className="font-mono text-xs">
-                  {filteredRows.length} / {summary?.total ?? 0}
-                </Badge>
+        <div className="relative lg:w-80">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar identificador, descripción o aeronave"
+            className="h-9 pl-9"
+          />
+        </div>
+      </div>
+
+      {isAlertsLoading ? (
+        <TableSkeleton />
+      ) : isError ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No se pudieron cargar las alertas</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Ocurrió un error inesperado al consultar la cola unificada.'}
+          </AlertDescription>
+        </Alert>
+      ) : filteredRows.length === 0 ? (
+        <Card className="border-dashed border-border/70">
+          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <Siren className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">No hay alertas para los filtros actuales.</p>
+            <p className="max-w-lg text-sm text-muted-foreground">
+              {alertRows.length === 0
+                ? 'Backend no devolvió ítems para la combinación seleccionada. El resumen superior se mantiene visible.'
+                : 'La cola sí contiene ítems, pero ninguno coincide con la búsqueda de texto actual.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">Cola priorizada</CardTitle>
+                <CardDescription>Orden: severidad, fecha, restante, aeronave.</CardDescription>
               </div>
-            </CardHeader>
-            <CardContent>
-              <AlertQueueTable alerts={filteredRows} />
-            </CardContent>
-          </Card>
-        )}
-      </main>
-    </ContentLayout>
+              <Badge variant="outline" className="font-mono text-xs">
+                {filteredRows.length} / {summary?.total ?? 0}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <AlertQueueTable alerts={filteredRows} />
+          </CardContent>
+        </Card>
+      )}
+    </main>
   );
 }

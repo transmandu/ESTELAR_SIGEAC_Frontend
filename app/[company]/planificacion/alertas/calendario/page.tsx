@@ -1,17 +1,20 @@
 'use client';
 
-import { ContentLayout } from '@/components/layout/ContentLayout';
+import SectionHeader from '@/components/layout/SectionHeader';
 import LoadingPage from '@/components/misc/LoadingPage';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlanificationAlertItemType, PlanificationAlertStatus } from '@/hooks/planificacion/useGetPlanificationAlerts';
-import { useGetPlanificationAlerts } from '@/hooks/planificacion/useGetPlanificationAlerts';
 import { useGetMaintenanceAircrafts } from '@/hooks/planificacion/useGetMaintenanceAircrafts';
+import {
+  PlanificationAlertItemType,
+  PlanificationAlertStatus,
+  useGetPlanificationAlerts,
+} from '@/hooks/planificacion/useGetPlanificationAlerts';
 import { useCompanyStore } from '@/stores/CompanyStore';
-import { useTheme } from 'next-themes';
 import { AlertCircle, Calendar, LayoutList } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { AlertCalendar } from './_components/alert-calendar';
@@ -73,20 +76,18 @@ export default function PlanificationAlertsCalendarPage() {
   if (isAircraftLoading) return <LoadingPage />;
 
   return (
-    <ContentLayout>
-      <main className="max-w-[2080px] space-y-5 p-4 lg:p-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-destructive" />
-              <h2 className="text-xl font-semibold text-foreground">Calendario de Alertas</h2>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Vista calendario de controles, hard time y directivas con fecha proyectada.
-            </p>
+    <main className="container space-y-5 p-4 lg:p-6">
+      {/* Header */}
+      <SectionHeader
+        size="md"
+        title="Calendario de Alertas"
+        subtitle="Vista calendario de controles, hard time y directivas con fecha proyectada."
+        titleIcon={
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive/20">
+            <Calendar className="h-5 w-5 text-destructive" />
           </div>
-
+        }
+        actions={
           <Link
             href={`/${selectedCompany?.slug}/planificacion/alertas`}
             className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
@@ -94,86 +95,86 @@ export default function PlanificationAlertsCalendarPage() {
             <LayoutList className="h-4 w-4" />
             Vista de tabla
           </Link>
-        </div>
+        }
+      />
 
-        {/* Filters */}
+      {/* Filters */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Filtros</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          <Select
+            value={selectedAircraftId === 'all' ? 'all' : String(selectedAircraftId)}
+            onValueChange={(value) => setSelectedAircraftId(value === 'all' ? 'all' : Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Aeronave" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toda la flota</SelectItem>
+              {aircraft.map((item) => (
+                <SelectItem key={item.id} value={String(item.id)}>
+                  {item.acronym} · {item.serial}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={itemTypeFilter}
+            onValueChange={(value) => setItemTypeFilter(value as 'all' | PlanificationAlertItemType)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Tipo de ítem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los tipos</SelectItem>
+              <SelectItem value="maintenance_control">Control de mantenimiento</SelectItem>
+              <SelectItem value="hard_time">Hard time</SelectItem>
+              <SelectItem value="directive">Directiva</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as 'all' | PlanificationAlertStatus)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Severidad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="OVERDUE">Vencido</SelectItem>
+              <SelectItem value="WARNING">Próximo</SelectItem>
+              <SelectItem value="OK">En tiempo</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Calendar */}
+      {isAlertsLoading ? (
+        <CalendarSkeleton />
+      ) : isError ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No se pudieron cargar las alertas</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Ocurrió un error inesperado al consultar las alertas.'}
+          </AlertDescription>
+        </Alert>
+      ) : (
         <Card className="border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Filtros</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            <Select
-              value={selectedAircraftId === 'all' ? 'all' : String(selectedAircraftId)}
-              onValueChange={(value) => setSelectedAircraftId(value === 'all' ? 'all' : Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Aeronave" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toda la flota</SelectItem>
-                {aircraft.map((item) => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.acronym} · {item.serial}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={itemTypeFilter}
-              onValueChange={(value) => setItemTypeFilter(value as 'all' | PlanificationAlertItemType)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo de ítem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="maintenance_control">Control de mantenimiento</SelectItem>
-                <SelectItem value="hard_time">Hard time</SelectItem>
-                <SelectItem value="directive">Directiva</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as 'all' | PlanificationAlertStatus)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Severidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="OVERDUE">Vencido</SelectItem>
-                <SelectItem value="WARNING">Próximo</SelectItem>
-                <SelectItem value="OK">En tiempo</SelectItem>
-              </SelectContent>
-            </Select>
+          <CardContent className="pt-6">
+            <AlertCalendar
+              alerts={alerts}
+              theme={theme === 'dark' ? 'dark' : 'light'}
+              onRangeUpdate={handleRangeUpdate}
+            />
           </CardContent>
         </Card>
-
-        {/* Calendar */}
-        {isAlertsLoading ? (
-          <CalendarSkeleton />
-        ) : isError ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No se pudieron cargar las alertas</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error ? error.message : 'Ocurrió un error inesperado al consultar las alertas.'}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Card className="border-border/60">
-            <CardContent className="pt-6">
-              <AlertCalendar
-                alerts={alerts}
-                theme={theme === 'dark' ? 'dark' : 'light'}
-                onRangeUpdate={handleRangeUpdate}
-              />
-            </CardContent>
-          </Card>
-        )}
-      </main>
-    </ContentLayout>
+      )}
+    </main>
   );
 }
