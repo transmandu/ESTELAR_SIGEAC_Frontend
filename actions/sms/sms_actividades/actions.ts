@@ -8,12 +8,12 @@ import { toast } from "sonner";
 
 // El formulario maneja fechas como Date; el backend espera strings yyyy-MM-dd
 type ActivityFormDates = { start_date: Date; end_date: Date };
-type SMSActivityData = Omit<SmsActivityRequest, 'start_date' | 'end_date'> & ActivityFormDates & { mitigation_measure_id?: number | null };
+type SMSActivityData = Omit<SmsActivityRequest, 'start_date' | 'end_date'> & ActivityFormDates & { mitigation_measure_id?: number | null; category_ids?: number[] };
 
 interface UpdateSMSActivityData {
   company: string | null;
   id: string;
-  data: Omit<SMSActivityData, 'status'> & { status: string; mitigation_measure_id?: number | null };
+  data: Omit<SMSActivityData, 'status'> & { status: string; mitigation_measure_id?: number | null; category_ids?: number[] };
 }
 
 interface NextActivityNumber {
@@ -47,6 +47,9 @@ export const useCreateSMSActivity = () => {
       if (data.executed_by) formData.append("executed_by", data.executed_by);
       if (data.mitigation_measure_id != null)
         formData.append("mitigation_measure_id", data.mitigation_measure_id.toString());
+      if (data.category_ids && data.category_ids.length > 0) {
+        data.category_ids.forEach((catId) => formData.append("category_ids[]", catId.toString()));
+      }
       if (data.image instanceof File) formData.append("image", data.image);
       if (data.document instanceof File) formData.append("document", data.document);
 
@@ -135,6 +138,9 @@ export const useUpdateSMSActivity = () => {
       if (data.executed_by) formData.append("executed_by", data.executed_by);
       if (data.mitigation_measure_id != null)
         formData.append("mitigation_measure_id", data.mitigation_measure_id.toString());
+      if (data.category_ids && data.category_ids.length > 0) {
+        data.category_ids.forEach((id) => formData.append("category_ids[]", id.toString()));
+      }
       if (data.image instanceof File) formData.append("image", data.image);
       if (data.document instanceof File) formData.append("document", data.document);
 

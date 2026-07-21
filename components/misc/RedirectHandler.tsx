@@ -3,7 +3,7 @@
 import { useCompanyStore } from '@/stores/CompanyStore';
 import { redirect, usePathname } from 'next/navigation';
 
-const ALLOWED_ROUTES = ['/login', '/register', '/ajustes', '/sistema', '/acceso_publico'];
+const ALLOWED_ROUTES = ['/login', '/register', '/ajustes', '/sistema', '/acceso_publico', '/not-authorized'];
 
 export const RedirectHandler = () => {
   const pathname = usePathname();

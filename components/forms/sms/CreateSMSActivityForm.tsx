@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useGetEmployeesByDepartment } from "@/hooks/sistema/useGetEmployeesByDepartament";
+import { useGetActivityCategories } from "@/hooks/sms/useGetActivityCategories";
 import { useGetMitigationTable } from "@/hooks/sms/useGetMitigationTable";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/CompanyStore";
@@ -41,7 +42,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2, Plus, X } from "lucide-react";
+import { CalendarIcon, Check, ChevronDown, Loader2, Plus, X } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -68,6 +69,7 @@ const FormSchema = z
         planned_by: z.string(),
         executed_by: z.string().optional(),
         mitigation_measure_id: z.number().nullable().optional(),
+        category_ids: z.array(z.number()).optional(),
         title: z.string(),
         image: z.any().optional(),
         document: z.any().optional(),
@@ -105,6 +107,7 @@ export default function CreateSMSActivityForm({
     const { data: employees, isLoading: isLoadingEmployees } =
         useGetEmployeesByDepartment("SMS", selectedStation, selectedCompany?.slug);
     const { data: mitigationTable } = useGetMitigationTable(selectedCompany?.slug);
+    const { data: categories } = useGetActivityCategories(selectedCompany?.slug);
 
     const [authenticatedImageUrl, setAuthenticatedImageUrl] = useState<string | null>(null);
     const [authenticatedDocumentUrl, setAuthenticatedDocumentUrl] = useState<string | null>(null);
@@ -178,6 +181,7 @@ export default function CreateSMSActivityForm({
             planned_by: initialData?.planned_by?.dni?.toString(),
             executed_by: initialData?.executed_by || "",
             mitigation_measure_id: (initialData as any)?.mitigation_measure_id ?? null,
+            category_ids: (initialData as any)?.categories?.map((c: { id: number }) => c.id) ?? [],
         },
     });
 
@@ -210,6 +214,7 @@ export default function CreateSMSActivityForm({
                 planned_by: initialData.planned_by?.dni?.toString(),
                 executed_by: initialData.executed_by || "",
                 mitigation_measure_id: (initialData as any)?.mitigation_measure_id ?? null,
+                category_ids: (initialData as any)?.categories?.map((c: { id: number }) => c.id) ?? [],
             });
         } else if (!isEditing) {
             if (nextNumberData?.next_number) {
@@ -263,6 +268,7 @@ export default function CreateSMSActivityForm({
                 data: {
                     ...data,
                     status: initialData.status ?? "ABIERTO",
+                    category_ids: data.category_ids ?? [],
                 },
             };
             await updateSMSActivity.mutateAsync(value);
@@ -270,7 +276,7 @@ export default function CreateSMSActivityForm({
             try {
                 await createSMSActivity.mutateAsync({
                     company: selectedCompany!.slug,
-                    data,
+                    data: { ...data, category_ids: data.category_ids ?? [] },
                 });
                 router.push(`/${selectedCompany?.slug}/sms/promocion/actividades`);
             } catch (error) {
@@ -531,6 +537,76 @@ export default function CreateSMSActivityForm({
                             <FormMessage className="text-xs" />
                         </FormItem>
                     )}
+                />
+
+                {/* Categorías de la Actividad */}
+                <FormField
+                    control={form.control}
+                    name="category_ids"
+                    render={({ field }) => {
+                        const selected: number[] = field.value ?? [];
+                        const toggle = (id: number) => {
+                            const next = selected.includes(id)
+                                ? selected.filter((x) => x !== id)
+                                : [...selected, id];
+                            field.onChange(next);
+                        };
+                        const selectedNames = (categories ?? [])
+                            .filter((c) => selected.includes(c.id))
+                            .map((c) => c.name);
+                        return (
+                            <FormItem>
+                                <FormLabel>Categorías de la Actividad</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant="outline"
+                                                type="button"
+                                                className="w-full justify-between font-normal"
+                                                disabled={!categories}
+                                            >
+                                                <span className="truncate text-left">
+                                                    {!categories
+                                                        ? <span className="text-muted-foreground">Cargando categorías...</span>
+                                                        : selectedNames.length > 0
+                                                            ? selectedNames.join(", ")
+                                                            : <span className="text-muted-foreground">Sin categorías seleccionadas</span>}
+                                                </span>
+                                                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-72 p-2" align="start">
+                                        <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
+                                            {categories && categories.length === 0 && (
+                                                <p className="px-2 py-3 text-xs text-muted-foreground text-center">
+                                                    No hay categorías disponibles. Créelas en Ajustes → Globales SMS.
+                                                </p>
+                                            )}
+                                            {(categories ?? []).map((cat) => {
+                                                const checked = selected.includes(cat.id);
+                                                return (
+                                                    <button
+                                                        key={cat.id}
+                                                        type="button"
+                                                        onClick={() => toggle(cat.id)}
+                                                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60 text-left"
+                                                    >
+                                                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
+                                                            {checked && <Check className="h-3 w-3" />}
+                                                        </span>
+                                                        {cat.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage className="text-xs" />
+                            </FormItem>
+                        );
+                    }}
                 />
 
                 {/* Fila 4: Temas Abordados */}

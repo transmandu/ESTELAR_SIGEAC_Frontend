@@ -242,6 +242,18 @@ const ShowSMSActivity = () => {
                     {activity.title && (
                       <p className="text-sm text-muted-foreground">{activity.title}</p>
                     )}
+                    {(activity as any)?.categories?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {(activity as any).categories.map((cat: { id: number; name: string }) => (
+                          <span
+                            key={cat.id}
+                            className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
+                          >
+                            {cat.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {statusConfig && (

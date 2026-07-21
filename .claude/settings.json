@@ -4,7 +4,8 @@
       "Bash(Get-ChildItem -Recurse \"d:\\\\SIGEAC_frontend_estelar\\\\SIGEAC_Frontend\\\\app\\\\[company]\\\\sms\\\\reportes\")",
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
-      "Read(//d/SIGEAC_frontend_estelar/SIGEAC_Frontend/app/**)"
+      "Read(//d/SIGEAC_frontend_estelar/SIGEAC_Frontend/app/**)",
+      "PowerShell(cd \"c:\\\\Proyectos\\\\SIGEAC_frontend_estelar\\\\SIGEAC_Frontend\"; \\(Get-Content package.json | ConvertFrom-Json\\).dependencies | Select-Object next, react)"
     ]
   }
 }
