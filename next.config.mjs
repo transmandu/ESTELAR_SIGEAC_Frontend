@@ -2,6 +2,7 @@ const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_BASE_URL
   ? new URL('/', process.env.NEXT_PUBLIC_STORAGE_BASE_URL)
   : null;
 
+// Redeploy trigger: proyecto de Vercel recreado (2026-08-31).
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
