@@ -61,6 +61,7 @@ import {
   Loader2,
   MapPin,
   Paperclip,
+  Plane,
   Send,
   ChevronRight,
 } from "lucide-react";
@@ -68,6 +69,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetSmsStations } from "@/hooks/sms/useGetSmsStations";
 import { useGetFindingLocations } from "@/hooks/sms/useGetFindingLocations";
+import { useGetAircrafts } from "@/hooks/aerolinea/aeronaves/useGetAircrafts";
 import {
   Dialog,
   DialogContent,
@@ -182,6 +184,9 @@ export function CreateGeneralObligatoryReportForm({
       pilot_id: z.string().optional(),
       copilot_id: z.string().optional(),
       aircraft_id: z.string().optional(),
+      flight_number: z.string().optional(),
+      airline_company_involved: z.string().optional(),
+      flight_phases: z.array(z.string()).optional(),
       incidents: z.array(z.string()).optional(),
       other_incidents: z.preprocess(
         (val) => (val === null || val === undefined ? "" : val),
@@ -230,6 +235,7 @@ export function CreateGeneralObligatoryReportForm({
   const companySlug = selectedCompany?.slug ?? company;
   const { data: stations, isLoading: isLoadingStations } = useGetSmsStations(companySlug);
   const { data: findingLocations, isLoading: isLoadingLocations } = useGetFindingLocations(companySlug);
+  const { data: aircrafts, isLoading: isLoadingAircrafts } = useGetAircrafts(companySlug);
   const [openCreateStation, setOpenCreateStation] = useState(false);
   const [openCreateLocation, setOpenCreateLocation] = useState(false);
 
@@ -267,6 +273,21 @@ export function CreateGeneralObligatoryReportForm({
     "Parametros de vuelo anormales",
   ];
 
+  // Values must match ObligatoryReportDocumentService::PHASES on the backend.
+  const FLIGHT_PHASE_OPTIONS: { value: string; label: string }[] = [
+    { value: "RODAJE", label: "Rodaje" },
+    { value: "DESPEGUE", label: "Despegue" },
+    { value: "APROXIMACION", label: "Aproximación" },
+    { value: "RODAJE_PISTA", label: "Rodaje en Pista" },
+    { value: "CRUCERO", label: "Crucero" },
+    { value: "REMOLQUE", label: "Remolque" },
+    { value: "PARQUEO", label: "Parqueo" },
+    { value: "DESCENSO", label: "Descenso" },
+    { value: "ATERRIZAJE", label: "Aterrizaje" },
+    { value: "MARCHA_ATRAS", label: "Marcha Atrás" },
+    { value: "ASCENSO", label: "Ascenso" },
+  ];
+
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -274,9 +295,14 @@ export function CreateGeneralObligatoryReportForm({
       sms_finding_location_id: (initialData as any)?.sms_finding_location_id || undefined,
       incident_location_other: initialData?.incident_location_other ?? "",
       description: initialData?.description ?? "",
-      aircraft_id: initialData?.aircraft_id?.toString(),
-      pilot_id: initialData?.pilot_id?.toString(),
-      copilot_id: initialData?.copilot_id?.toString(),
+      aircraft_id: initialData?.aircraft_id?.toString() ?? "",
+      pilot_id: initialData?.pilot_id?.toString() ?? "",
+      copilot_id: initialData?.copilot_id?.toString() ?? "",
+      flight_number: (initialData as any)?.flight_number ?? "",
+      airline_company_involved: (initialData as any)?.airline_company_involved ?? "",
+      flight_phases: Array.isArray((initialData as any)?.flight_phases)
+        ? ((initialData as any).flight_phases as string[])
+        : [],
       incidents: Array.isArray(initialData?.incidents)
         ? (initialData.incidents as string[]).filter((v) => typeof v === "string")
         : [],
@@ -289,6 +315,9 @@ export function CreateGeneralObligatoryReportForm({
         : new Date(),
     },
   });
+
+  const isAeronaveLocation =
+    findingLocations?.find((l) => l.id === form.watch("sms_finding_location_id"))?.name?.toUpperCase() === "AERONAVE";
 
   const onSubmit = async (data: FormSchemaType) => {
     try {
@@ -304,6 +333,9 @@ export function CreateGeneralObligatoryReportForm({
           pilot_id: data.pilot_id ?? null,
           copilot_id: data.copilot_id ?? null,
           aircraft_id: data.aircraft_id ?? null,
+          flight_number: data.flight_number ?? null,
+          airline_company_involved: data.airline_company_involved ?? null,
+          flight_phases: data.flight_phases ?? null,
           incidents: data.incidents ?? null,
           other_incidents: data.other_incidents ?? null,
           image: data.image ?? null,
@@ -464,8 +496,129 @@ export function CreateGeneralObligatoryReportForm({
           </div>
         </Section>
 
-        {/* ── 02 Fechas ── */}
-        <Section num="02" icon={CalendarIcon} title="Fechas del Evento">
+        {/* ── 02 Identificacion del Vuelo (solo si el lugar del hallazgo es Aeronave) ── */}
+        {isAeronaveLocation && (
+          <Section num="02" icon={Plane} title="Identificación del Vuelo">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="aircraft_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                      Aeronave
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                      disabled={isLoadingAircrafts}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-9 text-sm border-border focus:ring-amber-500/30">
+                          <SelectValue placeholder={isLoadingAircrafts ? "Cargando..." : "Seleccionar"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {aircrafts?.map((ac) => (
+                          <SelectItem key={ac.id} value={ac.id.toString()}>{ac.acronym}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="flight_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                      N° de Vuelo
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ej.: 123"
+                        className="h-9 text-sm border-border focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="airline_company_involved"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                      Empresa Involucrada
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nombre de la empresa"
+                        className="h-9 text-sm border-border focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="flight_phases"
+              render={() => (
+                <FormItem className="mt-3">
+                  <FormLabel className="text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                    Fases del Vuelo (si aplica)
+                  </FormLabel>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {FLIGHT_PHASE_OPTIONS.map((phase) => (
+                      <FormField
+                        key={phase.value}
+                        control={form.control}
+                        name="flight_phases"
+                        render={({ field }) => {
+                          const current = field.value ?? [];
+                          const checked = current.includes(phase.value);
+                          return (
+                            <FormItem className="flex items-center gap-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(isChecked) => {
+                                    field.onChange(
+                                      isChecked
+                                        ? [...current, phase.value]
+                                        : current.filter((v) => v !== phase.value)
+                                    );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">{phase.label}</FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+          </Section>
+        )}
+
+        {/* ── 03 Fechas ── */}
+        <Section num="03" icon={CalendarIcon} title="Fechas del Evento">
           <div className="grid grid-cols-2 gap-3">
             <FormField
               control={form.control}
@@ -491,7 +644,7 @@ export function CreateGeneralObligatoryReportForm({
         </Section>
 
         {/* ── 03 Descripción ── */}
-        <Section num="03" icon={FileText} title="Descripción del Suceso">
+        <Section num="04" icon={FileText} title="Descripción del Suceso">
           <FormField
             control={form.control}
             name="description"
@@ -514,7 +667,7 @@ export function CreateGeneralObligatoryReportForm({
         </Section>
 
         {/* ── 04 Incidentes ── */}
-        <Section num="04" icon={AlertTriangle} title="Tipo de Incidente">
+        <Section num="05" icon={AlertTriangle} title="Tipo de Incidente">
           <div className="flex flex-col gap-3">
 
             {/* Multi-select combobox */}
@@ -644,7 +797,7 @@ export function CreateGeneralObligatoryReportForm({
         </Section>
 
         {/* ── 05 Archivos Adjuntos ── */}
-        <Section num="05" icon={Paperclip} title="Archivos Adjuntos">
+        <Section num="06" icon={Paperclip} title="Archivos Adjuntos">
           <div className="grid grid-cols-2 gap-3">
 
             {/* Image upload */}

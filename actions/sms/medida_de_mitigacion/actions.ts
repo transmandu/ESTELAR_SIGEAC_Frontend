@@ -8,6 +8,7 @@ interface MitigationMeasureData {
     description: string;
     implementation_supervisor: string;
     implementation_responsible: string;
+    implementation_responsible_position?: string;
     estimated_date: Date;
     execution_date?: Date | null;
     mitigation_plan_id: number | string;
@@ -21,6 +22,7 @@ interface UpdateMitigationMeasureData {
     description: string;
     implementation_supervisor: string;
     implementation_responsible: string;
+    implementation_responsible_position?: string;
     estimated_date: Date;
     execution_date?: Date | null;
   };

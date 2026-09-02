@@ -5,7 +5,11 @@ import { toast } from "sonner";
 
 interface CreateObligatoryReportPayload {
   company: string;
-  data: ObligatoryReportRequest;
+  data: ObligatoryReportRequest & {
+    flight_number?: string | null;
+    airline_company_involved?: string | null;
+    flight_phases?: string[] | null;
+  };
 }
 
 interface UpdateObligatoryReportPayload {
@@ -14,6 +18,9 @@ interface UpdateObligatoryReportPayload {
   data: UpdateObligatoryReportRequest & {
     status?: string;
     danger_identification_id?: string | number | null;
+    flight_number?: string | null;
+    airline_company_involved?: string | null;
+    flight_phases?: string[] | null;
   };
 }
 

@@ -59,6 +59,8 @@ interface UpdateVoluntaryReportData {
     reporter_last_name?: string;
     reporter_phone?: string;
     reporter_email?: string;
+    referred_to_name?: string;
+    referred_to_position?: string;
     image?: File | string;
     document?: File | string;
   };
@@ -160,7 +162,7 @@ export const useAcceptVoluntaryReport = () => {
 
   const acceptVoluntaryReportMutation = useMutation({
     mutationFn: async ({ company, id, data }: UpdateVoluntaryReportData) => {
-      const response = await axiosInstance.patch(`/${company}/sms/accept-voluntary-reports/${id}`, data);
+      const response = await axiosInstance.patch(`/${company}/sms/voluntary-reports/accept/${id}`, data);
       return response.data;
     },
     onSuccess: () => {

@@ -40,6 +40,22 @@ export const columns: ColumnDef<MitigationMeasure>[] = [
     ),
   },
   {
+    accessorKey: "implementation_responsible_position",
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        filter
+        column={column}
+        title="Cargo del Responsable"
+      />
+    ),
+    meta: { title: "Cargo del Responsable" },
+    cell: ({ row }) => (
+      <div className="flex justify-center">
+        {row.original.implementation_responsible_position || "—"}
+      </div>
+    ),
+  },
+  {
     accessorKey: "implementation_supervisor",
     header: ({ column }) => (
       <DataTableColumnHeader

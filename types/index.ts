@@ -911,9 +911,13 @@ export type ObligatoryReport = {
   flight_origin: string;
   flight_destiny: string;
   flight_alt_destiny: string;
+  airline_company_involved?: string;
+  flight_phases?: string[];
   incidents: string;
   other_incidents: string;
   status: string;
+  sms_coordinator?: string;
+  sms_coordinator_position?: string;
   danger_identification: DangerIdentification;
   image?: string;
   document?: string;
@@ -975,6 +979,7 @@ export type MitigationMeasure = {
   description: string;
   implementation_supervisor: string;
   implementation_responsible: string;
+  implementation_responsible_position?: string | null;
   estimated_date: Date;
   execution_date?: Date | null;
   mitigation_plan_id: number;
