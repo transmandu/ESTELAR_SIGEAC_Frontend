@@ -11,6 +11,14 @@ import {
 } from "@/components/ui/form";
 
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useGetJobTitles } from "@/hooks/sistema/cargo/useGetJobTitles";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -52,6 +60,11 @@ const FormSchema = z.object({
       message: "El responsable no puede exceder los 23 caracteres",
     }),
 
+  implementation_responsible_position: z
+    .string()
+    .max(50, { message: "El cargo no puede exceder los 50 caracteres" })
+    .optional(),
+
   estimated_date: z
     .date()
     .refine((val) => !isNaN(val.getTime()), { message: "Fecha inválida" }),
@@ -82,6 +95,8 @@ export default function CreateMitigationMeasureForm({
     defaultValues: {
       description: initialData?.description || "",
       implementation_responsible: initialData?.implementation_responsible || "",
+      implementation_responsible_position:
+        initialData?.implementation_responsible_position || "",
       implementation_supervisor: initialData?.implementation_supervisor || "",
       estimated_date: initialData?.estimated_date
         ? new Date(initialData.estimated_date)
@@ -94,6 +109,9 @@ export default function CreateMitigationMeasureForm({
   const { selectedCompany } = useCompanyStore();
   const { createMitigationMeasure } = useCreateMitigationMeasure();
   const { updateMitigationMeasure } = useUpdateMitigationMeasure();
+  const { data: jobTitles, isLoading: isJobTitlesLoading } = useGetJobTitles(
+    selectedCompany?.slug
+  );
 
   const onSubmit = async (data: FormSchemaType) => {
     if (isEditing && initialData) {
@@ -177,6 +195,35 @@ export default function CreateMitigationMeasureForm({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="implementation_responsible_position"
+          render={({ field }) => (
+            <FormItem className="w-full">
+              <FormLabel>Cargo del encargado de la implementación</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+                disabled={isJobTitlesLoading}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione un cargo" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {jobTitles?.map((title) => (
+                    <SelectItem key={title.id} value={title.name}>
+                      {title.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField
