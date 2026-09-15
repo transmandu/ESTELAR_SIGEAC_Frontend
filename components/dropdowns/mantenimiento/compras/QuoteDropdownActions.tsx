@@ -33,6 +33,7 @@ import {
   DialogTitle
 } from "../../../ui/dialog";
 import { useCreatePurchaseOrder } from "@/actions/mantenimiento/compras/ordenes_compras/actions";
+import { useGetPurchaseOrders } from "@/hooks/mantenimiento/compras/useGetPurchaseOrders";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
@@ -75,6 +76,26 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
   }, [quote]);
 
   const hasMultipleVendors = vendorGroups.length > 1;
+
+  const { data: purchaseOrders } = useGetPurchaseOrders(selectedCompany?.slug ?? null, selectedCompany?.slug ?? null);
+
+  const nextOrderNumber = useMemo(() => {
+    const yearSuffix = new Date().getFullYear().toString().slice(-2);
+    const pattern = new RegExp(`^${yearSuffix}-(\\d{4})$`);
+
+    const maxNumber = (purchaseOrders ?? []).reduce((max, po) => {
+      const match = po.order_number?.match(pattern);
+      if (!match) return max;
+      return Math.max(max, Number(match[1]));
+    }, 134);
+
+    return `${yearSuffix}-${String(maxNumber + 1).padStart(4, '0')}`;
+  }, [purchaseOrders]);
+
+  const handleOpenApprove = () => {
+    setOrderNumber(nextOrderNumber);
+    setOpenApprove(true);
+  };
 
   const { updateStatusQuote } = useUpdateQuoteStatus();
   const { updateStatusRequisition } = useUpdateRequisitionStatus();
@@ -203,7 +224,7 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
         <DropdownMenuContent align="center" className="flex flex-col gap-1">
           {quote.status !== "APROBADO" && quote.status !== "RECHAZADA" && (
             <>
-              <DropdownMenuItem onClick={() => setOpenApprove(true)}>
+              <DropdownMenuItem onClick={handleOpenApprove}>
                 <ClipboardCheck className="size-5 text-green-500 mr-2" />
                 Aprobar
               </DropdownMenuItem>
@@ -290,7 +311,7 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
             <Input
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
-              placeholder="Ej: PO-2026-001"
+              placeholder="Ej: 26-0135"
             />
             {!orderNumber && (
               <span className="text-xs text-red-500">
