@@ -1,6 +1,9 @@
 'use client'
 
-import { useUpdatePurchaseOrderStatus } from '@/actions/mantenimiento/compras/ordenes_compras/actions'
+import {
+  useDownloadPurchaseOrderFormat,
+  useUpdatePurchaseOrderStatus,
+} from '@/actions/mantenimiento/compras/ordenes_compras/actions'
 import { useCompanyStore } from '@/stores/CompanyStore'
 import { PurchaseOrder } from '@/types'
 import {
@@ -12,9 +15,9 @@ import {
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { CompletePurchaseForm } from '@/components/forms/mantenimiento/compras/CompletePurchaseForm'
-import { BadgeDollarSign, ClipboardCheck, EyeIcon, Loader2, MoreHorizontal } from 'lucide-react'
+import { BadgeDollarSign, ClipboardCheck, EyeIcon, FileDown, Loader2, MoreHorizontal } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 const moneyFormatter = new Intl.NumberFormat('en-US', {
@@ -30,8 +33,19 @@ const PurchaseOrderDropdownActions = ({ po }: { po: PurchaseOrder }) => {
   const [openPayed, setOpenPayed] = useState(false)
   const { selectedCompany } = useCompanyStore()
   const { updatePurchaseOrderStatus } = useUpdatePurchaseOrderStatus()
+  const { downloadPurchaseOrderFormat } = useDownloadPurchaseOrderFormat()
 
   const status = po.status?.toLowerCase().trim()
+
+  const handleDownloadFormat = () => {
+    if (!selectedCompany?.slug) return
+
+    downloadPurchaseOrderFormat.mutate({
+      company: selectedCompany.slug,
+      id: po.id,
+      order_number: po.order_number,
+    })
+  }
 
   const handleConfirmPaid = async () => {
     await updatePurchaseOrderStatus.mutateAsync({
@@ -51,19 +65,35 @@ const PurchaseOrderDropdownActions = ({ po }: { po: PurchaseOrder }) => {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" className="flex gap-2 justify-center">
+        <DropdownMenuContent align="end" className="flex-col gap-1 justify-center">
           {status === 'proceso' && (
             <DropdownMenuItem onClick={() => setOpenApprove(true)}>
-              <ClipboardCheck className="size-5 text-green-500" />
+              <ClipboardCheck className="size-4 text-green-500" />
+              <p className="pl-2">Completar</p>
             </DropdownMenuItem>
           )}
           {status === 'credito' && (
             <DropdownMenuItem onClick={() => setOpenPayed(true)}>
-              <BadgeDollarSign className="size-5 text-blue-500" />
+              <BadgeDollarSign className="size-4 text-blue-500" />
+              <p className="pl-2">Marcar Pagado</p>
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem>
-            <EyeIcon className="size-5" />
+          <DropdownMenuItem asChild>
+            <Link href={`/${selectedCompany?.slug}/compras/ordenes_compra/${po.order_number}`}>
+              <EyeIcon className="size-4" />
+              <p className="pl-2">Ver</p>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleDownloadFormat}
+            disabled={downloadPurchaseOrderFormat.isPending}
+          >
+            {downloadPurchaseOrderFormat.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileDown className="size-4" />
+            )}
+            <p className="pl-2">Descargar formato</p>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

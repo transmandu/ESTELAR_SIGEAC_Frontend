@@ -1,6 +1,9 @@
 'use client';
 
-import { useDeletePurchaseOrder } from '@/actions/mantenimiento/compras/ordenes_compras/actions';
+import {
+  useDeletePurchaseOrder,
+  useDownloadPurchaseOrderFormat,
+} from '@/actions/mantenimiento/compras/ordenes_compras/actions';
 import { ContentLayout } from '@/components/layout/ContentLayout';
 import LoadingPage from '@/components/misc/LoadingPage';
 import { CompletePurchaseForm } from '@/components/forms/mantenimiento/compras/CompletePurchaseForm';
@@ -11,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { useGetPurchaseOrder } from '@/hooks/mantenimiento/compras/useGetPurchaseOrder';
 import { cn } from '@/lib/utils';
 import { useCompanyStore } from '@/stores/CompanyStore';
-import { ArrowLeft, ExternalLink, Loader2, Package2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileDown, Loader2, Package2, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -42,6 +45,7 @@ const PurchaseOrderDetailPage = () => {
 
   const { data, isLoading } = useGetPurchaseOrder(selectedCompany?.slug, order_number);
   const { deletePurchaseOrder } = useDeletePurchaseOrder();
+  const { downloadPurchaseOrderFormat } = useDownloadPurchaseOrderFormat();
 
   const [openDelete, setOpenDelete] = useState(false);
   const [openComplete, setOpenComplete] = useState(false);
@@ -101,6 +105,7 @@ const PurchaseOrderDetailPage = () => {
                 label="Fecha"
                 value={data.purchase_date ? format(new Date(data.purchase_date), 'PPP', { locale: es }) : undefined}
               />
+              <InfoCell label="Vendor Quote" value={data.vendor_quote} mono />
               <InfoCell label="Creado por" value={data.created_by} />
             </div>
           </section>
@@ -145,7 +150,13 @@ const PurchaseOrderDetailPage = () => {
                     </div>
                     <div className="space-y-1">
                       <p className={fieldLabelClass}>Cantidad</p>
-                      <p className="text-sm font-medium">{article.quantity}</p>
+                      <p className="text-sm font-medium">
+                        {article.quantity}
+                        {article.unit && <span className="ml-1 font-mono text-xs text-muted-foreground">{article.unit}</span>}
+                      </p>
+                      {article.condition && (
+                        <p className="font-mono text-xs text-muted-foreground">Cond: {article.condition}</p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <p className={fieldLabelClass}>Unit Price</p>
@@ -184,6 +195,27 @@ const PurchaseOrderDetailPage = () => {
               <Button disabled={data.status !== 'PROCESO'} className="w-full" size="sm" onClick={() => setOpenComplete(true)}>
                 <Package2 className="mr-2 h-3.5 w-3.5" />
                 Completar PO
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                size="sm"
+                disabled={downloadPurchaseOrderFormat.isPending || !selectedCompany?.slug}
+                onClick={() => {
+                  if (!selectedCompany?.slug) return;
+                  downloadPurchaseOrderFormat.mutate({
+                    company: selectedCompany.slug,
+                    id: data.id,
+                    order_number: data.order_number,
+                  });
+                }}
+              >
+                {downloadPurchaseOrderFormat.isPending ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="mr-2 h-3.5 w-3.5" />
+                )}
+                Descargar formato
               </Button>
               <Button
                 disabled={data.status !== 'PROCESO'}
