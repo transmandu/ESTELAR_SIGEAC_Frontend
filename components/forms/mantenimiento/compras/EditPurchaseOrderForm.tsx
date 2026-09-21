@@ -47,7 +47,9 @@ const FormSchema = z.object({
     z.object({
       id: z.number().optional(),
       article_part_number: z.string(),
+      condition: z.string().optional(),
       quantity: z.number().min(1, { message: 'Mínimo 1.' }),
+      unit: z.string().optional(),
       unit_price: z.string().min(1, { message: 'Debe ingresar un precio.' }),
     }),
   ),
@@ -78,7 +80,9 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
       articles: po.article_purchase_order.map((a) => ({
         id: a.id,
         article_part_number: a.article_part_number,
+        condition: a.condition ?? '',
         quantity: Number(a.quantity),
+        unit: a.unit ?? '',
         unit_price: String(a.unit_price),
       })),
     },
@@ -108,7 +112,9 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
         articles_purchase_orders: data.articles.map((a) => ({
           id: a.id,
           article_part_number: a.article_part_number,
+          condition: a.condition || null,
           quantity: a.quantity,
+          unit: a.unit || null,
           unit_price: a.unit_price,
         })),
       },
@@ -273,9 +279,9 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
 
           {/* Column headers — desktop */}
           <div className="hidden border-b bg-muted/10 px-5 py-2.5 lg:block">
-            <div className="grid grid-cols-[minmax(0,2fr)_80px_160px_120px] items-center gap-3">
-              {(['Part Number', 'Cant.', 'Precio Unit.', 'Total'] as const).map((col, i) => (
-                <span key={col} className={cn(fieldLabel, i === 3 && 'text-right')}>
+            <div className="grid grid-cols-[minmax(0,2fr)_90px_80px_80px_160px_120px] items-center gap-3">
+              {(['Part Number', 'Condición', 'Cant.', 'Unidad', 'Precio Unit.', 'Total'] as const).map((col, i) => (
+                <span key={col} className={cn(fieldLabel, i === 5 && 'text-right')}>
                   {col}
                 </span>
               ))}
@@ -296,7 +302,7 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
                     </p>
                   </div>
 
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_80px_160px_120px] lg:items-start">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_90px_80px_80px_160px_120px] lg:items-start">
                     {/* P/N — read-only */}
                     <FormField
                       control={control}
@@ -307,6 +313,28 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
                           <div className="flex min-h-9 items-center rounded-md border border-border/70 bg-muted/30 px-3 py-2">
                             <span className="break-all font-mono text-xs font-medium">{field.value}</span>
                           </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Condition */}
+                    <FormField
+                      control={control}
+                      name={`articles.${index}.condition`}
+                      render={({ field }) => (
+                        <FormItem className="space-y-1.5">
+                          <p className={cn(fieldLabel, 'lg:hidden')}>Condición</p>
+                          <FormControl>
+                            <Input
+                              className="h-9 text-center text-sm font-medium uppercase"
+                              placeholder="OH"
+                              maxLength={10}
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                            />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -325,6 +353,28 @@ export function EditPurchaseOrderForm({ po, onSuccess }: EditPurchaseOrderFormPr
                               className="h-9 text-center text-sm font-semibold"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Unit */}
+                    <FormField
+                      control={control}
+                      name={`articles.${index}.unit`}
+                      render={({ field }) => (
+                        <FormItem className="space-y-1.5">
+                          <p className={cn(fieldLabel, 'lg:hidden')}>Unidad</p>
+                          <FormControl>
+                            <Input
+                              className="h-9 text-center text-sm font-medium uppercase"
+                              placeholder="EA"
+                              maxLength={10}
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                             />
                           </FormControl>
                           <FormMessage />

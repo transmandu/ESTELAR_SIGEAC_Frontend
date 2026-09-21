@@ -33,6 +33,8 @@ const FormSchema = z.object({
       part_number: z.string(),
       alt_part_number: z.string().optional(),
       quantity: z.number().min(1, { message: 'Debe ingresar al menos 1.' }),
+      // Unidad de compra: puede diferir de la unidad solicitada en la requisicion.
+      unit: z.string({ message: 'Debe elegir la unidad.' }).min(1, { message: 'Debe elegir la unidad.' }),
       unit_price: z.string().min(0, { message: 'El precio no puede ser negativo.' }),
       condition: z.string({ message: 'Debe elegir la condicion.' }),
       vendor_id: z.string({ message: 'Debe seleccionar un proveedor para cada articulo.' }).min(1, { message: 'Debe seleccionar un proveedor para cada articulo.' }),
@@ -73,7 +75,9 @@ export function CreateQuoteForm({
         part_number: a.article_part_number,
         alt_part_number: '',
         quantity: Number(a.quantity),
-        unit: a.unit?.id ? a.unit.id.toString() : undefined,
+        // Cotizaciones anteriores al campo Unidad no lo tienen: se precarga EA
+        // para no bloquear su edicion.
+        unit: a.unit ?? 'EA',
         unit_price: a.unit_price?.toString() ?? '',
         condition: a.condition ?? '',
         vendor_id: a.vendor_id?.toString() ?? a.vendor?.id?.toString() ?? '',
@@ -84,7 +88,7 @@ export function CreateQuoteForm({
           part_number: batchArticle.part_number,
           alt_part_number: batchArticle.alt_part_number || '',
           quantity: batchArticle.quantity,
-          unit: batchArticle.unit ? batchArticle.unit.id.toString() : undefined,
+          unit: '',
           unit_price: '',
           condition: '',
           vendor_id: '',
@@ -473,7 +477,7 @@ export function CreateQuoteForm({
                   </div>
 
                   {/* Row 2: Alt P/N + Qty + Condition + Price + Total */}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.5fr)_64px_100px_140px_100px] sm:items-end sm:pl-9">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.5fr)_64px_84px_100px_140px_100px] sm:items-end sm:pl-9">
                     <FormField
                       control={control}
                       name={`articles.${index}.alt_part_number`}
@@ -511,6 +515,36 @@ export function CreateQuoteForm({
                                 field.onChange(v === '' ? '' : Number(v));
                               }}
                             />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={control}
+                      name={`articles.${index}.unit`}
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-1">
+                          <p className={fieldLabel}>Unidad</p>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger
+                                aria-invalid={fieldState.invalid}
+                                className="h-9 border-border/70"
+                              >
+                                <SelectValue placeholder="Selec..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="EA">EA</SelectItem>
+                                <SelectItem value="KG">KG</SelectItem>
+                                <SelectItem value="LT">LT</SelectItem>
+                                <SelectItem value="FT">FT</SelectItem>
+                                <SelectItem value="GL">GL</SelectItem>
+                                <SelectItem value="MT">MT</SelectItem>
+                                <SelectItem value="SET">SET</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

@@ -1,5 +1,6 @@
 import axiosInstance from "@/lib/axios"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
 import { toast } from "sonner"
 
 interface POArticles {
@@ -227,4 +228,52 @@ export const useDeleteQuote = () => {
   return {
     deleteQuote: deleteMutation,
   }
+}
+
+/**
+ * Descarga el formato (plantilla OpenTBS renderizada) de una orden de compra.
+ * El backend genera el documento a partir del template Word y lo devuelve como PDF.
+ */
+export const useDownloadPurchaseOrderFormat = () => {
+
+  const downloadMutation = useMutation({
+    mutationFn: async ({ company, id, order_number }: { company: string, id: number | string, order_number?: string }) => {
+      const response = await axiosInstance.get(`/${company}/purchase-order/${id}/format`, {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `orden-compra-${order_number ?? id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    },
+    onSuccess: () => {
+      toast.success("Formato generado", {
+        description: "El formato de la orden de compra se ha descargado correctamente."
+      })
+    },
+    onError: async (error) => {
+      const fallback = "No se pudo generar el formato."
+      let message = fallback
+
+      // Con responseType 'blob' la respuesta de error tambien llega como Blob,
+      // asi que hay que leerla para recuperar el mensaje del backend.
+      if (isAxiosError(error)) {
+        const data = error.response?.data
+        try {
+          const raw = data instanceof Blob ? await data.text() : null
+          message = (raw ? JSON.parse(raw)?.message : data?.message) ?? fallback
+        } catch {
+          message = fallback
+        }
+      }
+
+      toast.error("Oops!", { description: message })
+    },
+  })
+
+  return { downloadPurchaseOrderFormat: downloadMutation }
 }

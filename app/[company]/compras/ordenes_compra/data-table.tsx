@@ -21,7 +21,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { PurchaseOrder } from '@/types';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 const moneyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -158,9 +158,8 @@ export function DataTable<TValue>({ columns, data }: DataTableProps<TValue>) {
               <TableBody>
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <>
+                    <Fragment key={row.id}>
                       <TableRow
-                        key={row.id}
                         data-state={row.getIsSelected() && 'selected'}
                         className={cn('hover:bg-muted/40 transition-colors', row.getIsExpanded() && 'bg-muted/10')}
                       >
@@ -171,13 +170,13 @@ export function DataTable<TValue>({ columns, data }: DataTableProps<TValue>) {
                         ))}
                       </TableRow>
                       {row.getIsExpanded() && (
-                        <TableRow key={`${row.id}-expanded`} className="hover:bg-transparent">
+                        <TableRow className="hover:bg-transparent">
                           <TableCell colSpan={columns.length} className="p-0">
                             <POSubRow row={row} />
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 ) : (
                   <TableRow>

@@ -608,6 +608,7 @@ export type PurchaseOrder = {
   id: number;
   order_number: string;
   justification: string;
+  vendor_quote?: string;
   article_purchase_order: {
     batch?: {
       name: string;
@@ -615,7 +616,9 @@ export type PurchaseOrder = {
     id: number;
     article_part_number: string;
     article_alt_part_number?: string;
+    condition?: string;
     quantity: number;
+    unit?: string;
     unit_price: string;
     article_tax: number;
     usa_tracking: string;
@@ -654,7 +657,8 @@ export type ArticleQuoteOrder = {
   quantity: number;
   unit_price: string;
   condition: 'NE' | 'NS' | 'OH' | 'SV';
-  unit?: Convertion;
+  /** Unidad de compra (EA, KG, LT...). Se define al cotizar. */
+  unit?: string;
   image: string;
   vendor_id?: number | null;
   vendor?: { id: number; name: string };

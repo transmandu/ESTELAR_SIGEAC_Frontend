@@ -48,6 +48,7 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [vendorQuote, setVendorQuote] = useState("");
 
   const userRoles = user?.roles?.map((r) => r.name) ?? [];
   const isPrivileged = userRoles.some((r) => FULL_ACCESS_ROLES.includes(r));
@@ -175,7 +176,8 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
           vendor_id: group.vendorId,
           created_by: `${user?.first_name} ${user?.last_name}`,
           articles_purchase_orders: group.articles,
-          quote_order_id: Number(quote.id)
+          quote_order_id: Number(quote.id),
+          vendor_quote: vendorQuote.trim() || null,
         };
 
         await createPurchaseOrder.mutateAsync({
@@ -206,6 +208,7 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
 
       setOpenApprove(false);
       setOrderNumber("");
+      setVendorQuote("");
     } catch (error) {
       console.error("Error aprobando cotización:", error);
     }
@@ -293,7 +296,14 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
       </Dialog>
 
       {/* ✅ APROBAR */}
-      <Dialog open={openApprove} onOpenChange={setOpenApprove}>
+      <Dialog
+        open={openApprove}
+        onOpenChange={(open) => {
+          setOpenApprove(open);
+          // Evita que el Vendor Quote quede pegado al aprobar otra cotizacion.
+          if (!open) setVendorQuote("");
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-center">
@@ -318,6 +328,18 @@ const QuoteDropdownActions = ({ quote }: { quote: Quote }) => {
                 El número de orden es obligatorio
               </span>
             )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Vendor Quote:</Label>
+            <Input
+              value={vendorQuote}
+              onChange={(e) => setVendorQuote(e.target.value)}
+              placeholder="Ej: QT-0181"
+            />
+            <span className="text-xs text-muted-foreground">
+              Nro. de cotización del proveedor. Aparece en el formato impreso.
+            </span>
           </div>
 
           <DialogFooter className="flex gap-2 mt-4">
